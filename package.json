@@ -1,0 +1,25 @@
+{
+  "name": "batch-processing",
+  "version": "1.0.0",
+  "description": "This is a nodejs module for batch processing, with the following features:",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "bottleneck": "^2.3.0",
+    "chai": "^4.1.2",
+    "event-stream": "^3.3.4",
+    "oe-logger": "^1.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "mocha test/batch-process-tests.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@10.73.97.24:oecloud.io/batch-processing.git"
+  },
+  "author": "",
+  "license": "ISC"
+}
