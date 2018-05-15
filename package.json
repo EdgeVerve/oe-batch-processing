@@ -10,7 +10,9 @@
     "bottleneck": "^2.3.0",
     "chai": "^4.1.2",
     "event-stream": "^3.3.4",
-    "oe-logger": "^1.0.0"
+    "mocha": "^5.1.1",
+    "oe-logger": "^1.0.0",
+    "request": "^2.85.0"
   },
   "devDependencies": {},
   "scripts": {
