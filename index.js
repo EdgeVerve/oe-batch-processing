@@ -1,3 +1,6 @@
+if(!process.env["LOGGER_CONFIG"] && process.env["BATCH_LOGGER_CONFIG"]) {
+    process.env["LOGGER_CONFIG"] = JSON.stringify({"levels":{"default":process.env["BATCH_LOGGER_CONFIG"].trim().toLocaleLowerCase()}});
+}
 var log = require('oe-logger')('batch-processing');
 var config;
 try {
@@ -15,10 +18,12 @@ var bottleNeckConfig = { maxConcurrent: process.env["MAX_CONCURRENT"] ||
 log.debug("BottleNeck Config: " + JSON.stringify(bottleNeckConfig));                        
 const limiter = new Bottleneck(bottleNeckConfig);
 var BATCH_RESULT_LOG_ITEMS = process.env["BATCH_RESULT_LOG_ITEMS"] || (config && config.batchResultLogItems) || "";
-
+var running = false;
 
 function processFile(filePath, options, jobService, cb) {
-    log.debug("Starting Batch Processing");
+    running = true;
+    var start = new Date().getTime();
+    console.log("** Starting Batch Processing **");
     log.debug("filePath = " + filePath);
     log.debug("options = " + JSON.stringify(options));
     log.debug("jobservice : " + jobService);
@@ -27,12 +32,9 @@ function processFile(filePath, options, jobService, cb) {
     var appBaseURL = process.env["APP_BASE_URL"] || (options && options.appBaseURL);
 
     limiter.on('error', function (error) {
-        log.error("An error occurred: ");
-        log.error(error.message);
-    });
-
-    limiter.on('debug', function (message, data) {
-        //log.debug(JSON.stringify(limiter.counts()));
+        log.fatal("An error occurred: ");
+        log.fatal(error.message);
+        process.exit(1);
     });
 
     limiter.on('idle', function () {
@@ -40,6 +42,7 @@ function processFile(filePath, options, jobService, cb) {
         jobService.onEnd(function() {
             log.debug("jobService.onEnd finished, calling processFile cb");
             cb();
+            running = false;
         });
     });
 
@@ -76,6 +79,11 @@ function processFile(filePath, options, jobService, cb) {
                             if(response.statusCode !== 200) {
                                 log.error("ERROR: Error while posting status: ERROR: " + JSON.stringify(error) + " STATUS: " + JSON.stringify(result) + " RESPONSE: " + JSON.stringify(response));
                             } else log.debug("Posted status successfully for " + JSON.stringify(result.payload));
+                            if(!running) {
+                                var end = new Date().getTime();
+                                console.log("Batch took " + ((end - start)/1000) + " sec");
+                                running = true;
+                            }
                         });
                     } catch(e) {
                         log.error("ERROR: Could not post status: ERROR: " + JSON.stringify(e) + " STATUS: " + JSON.stringify(result));
@@ -85,7 +93,8 @@ function processFile(filePath, options, jobService, cb) {
                 s.resume();
             })
             .on('error', function(err){
-                log.error('Error while reading file.' + JSON.stringify(err));
+                log.fatal('Error while reading file.' + JSON.stringify(err));
+                process.exit(1);
             })
             .on('end', function(){
                 log.debug('Read entire file: ' + filePath)
@@ -99,26 +108,28 @@ function processFile(filePath, options, jobService, cb) {
 function runJob(jobService, recData, cb3) {
     log.debug("runJob started for : " + JSON.stringify(recData));
     jobService.onEachRecord(recData, function cb2(payload, err) {
-        var appBaseURL = process.env["APP_BASE_URL"] || (jobService.options && jobService.options.appBaseURL);
+        var appBaseURL = process.env["APP_BASE_URL"] || payload.appBaseURL || (jobService.options && jobService.options.appBaseURL);
         if(!appBaseURL) {
-            log.error("appBaseURL is not specified as options.appBaseURL. Aborting job.");
+            log.fatal("appBaseURL is neither specified as options.appBaseURL nor passed in payload. Aborting job.");
             process.exit(1);
         }
         var access_token = payload && payload.ctx && payload.ctx.access_token; 
         access_token =  access_token || (jobService.options && jobService.options.ctx && jobService.options.ctx.access_token);
-        payload.fileName = recData.fileName;
-        payload.recId = recData.recId;
-        if(!(config.excludeFileRecordFromStatus === true)) payload.rec = recData.rec;
-        if(err === null) {
+        if(payload) {
+            payload.fileName = recData.fileName;
+            payload.recId = recData.recId;
+            if(!(config.excludeFileRecordFromStatus === true)) payload.rec = recData.rec;
+        }
+        if(payload && (err === null)) {
             var api = (payload.modelAPI ? payload.modelAPI : jobService.options.modelAPI);
             if(!api) {
-                log.error("API is neither specified as options.modelAPI nor passed in payload. Aborting job.");
+                log.fatal("API is neither specified as options.modelAPI nor passed in payload. Aborting job.");
                 process.exit(1);
             }
             var url = appBaseURL + (api.startsWith("/") ? "" : "/") + api + "?access_token=" + access_token;
             var method = payload.method || jobService.options.method;
             if(!method) {
-                log.error("method is neither specified as options.method nor passed in payload. Aborting job.");
+                log.fatal("method is neither specified as options.method nor passed in payload. Aborting job.");
                 process.exit(1);
             }
 

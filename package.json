@@ -1,20 +1,21 @@
 {
   "name": "batch-processing",
   "version": "1.0.0",
-  "description": "This is a nodejs module for batch processing, with the following features:",
+  "description": "This is a nodejs module for batch processing of files. See README.md for details.",
   "main": "index.js",
   "directories": {
     "test": "test"
   },
   "dependencies": {
     "bottleneck": "^2.3.0",
-    "chai": "^4.1.2",
     "event-stream": "^3.3.4",
-    "mocha": "^5.1.1",
     "oe-logger": "^1.0.0",
     "request": "^2.85.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "mocha": "^5.1.1",
+    "chai": "^4.1.2"
+  },
   "scripts": {
     "test": "mocha test/batch-process-tests.js"
   },
@@ -22,6 +23,6 @@
     "type": "git",
     "url": "git@10.73.97.24:oecloud.io/batch-processing.git"
   },
-  "author": "",
+  "author": "Ajith Vasudevan",
   "license": "ISC"
 }
