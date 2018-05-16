@@ -28,10 +28,11 @@ describe("batch-processing-tests", function () {
 //        var filePath = "D:/20k.txt";
 //        var filePath = "D:/100mil.txt";
         var options = { 
-                ctx: {access_token: "DLeeHyh49HNyqm08hd4Ac2AjrLNYdJ1ANeGIMJin9OUkt9iXgxWCnKLO3bRUNKzf"},
-                appBaseURL: "http://localhost:3000",
-                modelAPI: "/api/Literals",
-                method: "POST"
+                ctx: {access_token: "P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx"},
+                //ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},
+                appBaseURL: 'http://localhost:3000',
+                modelAPI: '/api/Literals',
+                method: 'POST'          
             };
 
         var jobService = {
@@ -45,16 +46,14 @@ describe("batch-processing-tests", function () {
                         cb();
             },
             onEachRecord: function onEachRecord (recData, cb) {
-                log.debug("calling jobService.onEachRecord for record: " + recData.rec + " with recId=" + recData.recId);
+                log.debug("calling jobService.onEachRecord for recID: " + recData.recId);
                 var json = {"key": recData.rec.split(' ')[0], "value": recData.rec.split(' ')[1]};
                 var payload = {
-                    json: json
-                    // appBaseURL: "http://localhost:3000"  
-                    //ctx: {access_token: "DLeeHyh49HNyqm08hd4Ac2AjrLNYdJ1ANeGIMJin9OUkt9iXgxWCnKLO3bRUNKzf"},
+                    json: json,
                     //modelAPI: "/api/Literals",
                     //method: "POST" 
                 };
-                cb(payload, payload ? null : "Couldn't get payload for record " + rec);
+                cb(payload, payload ? null : "Couldn't get payload for recId " + (recData && recData.recId));
             }
         };
 
