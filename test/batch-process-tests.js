@@ -23,16 +23,17 @@ describe("batch-processing-tests", function () {
     it('should call processFile', function (done) {
         log.debug("calling processFile");
 
-        var filePath = "test/testdata.txt";
+        var filePath = "test/testdata.1.txt";
 //        var filePath = "D:/1k.txt";
 //        var filePath = "D:/20k.txt";
 //        var filePath = "D:/100mil.txt";
         var options = { 
-                ctx: {access_token: "P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx"},
-                //ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},
+                //ctx: {access_token: "P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx"},
+                ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},
                 appBaseURL: 'http://localhost:3000',
                 modelAPI: '/api/Literals',
-                method: 'POST'          
+                method: 'POST',
+                headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}          
             };
 
         var jobService = {
@@ -46,12 +47,13 @@ describe("batch-processing-tests", function () {
                         cb();
             },
             onEachRecord: function onEachRecord (recData, cb) {
-                log.debug("calling jobService.onEachRecord for recID: " + recData.recId);
+                log.debug("Inside jobService.onEachRecord: recID: " + recData.recId);
                 var json = {"key": recData.rec.split(' ')[0], "value": recData.rec.split(' ')[1]};
                 var payload = {
                     json: json,
                     //modelAPI: "/api/Literals",
-                    //method: "POST" 
+                    //method: "POST",
+                    //headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'} 
                 };
                 cb(payload, payload ? null : "Couldn't get payload for recId " + (recData && recData.recId));
             }
