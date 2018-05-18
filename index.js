@@ -84,7 +84,9 @@ var running = false;
 function processFile(filePath, options, jobService, cb) {
     running = true;
     var start = new Date().getTime();       // For logging
-    console.log("** Starting Batch Processing **");
+    console.log("\n** Starting Batch Processing **");
+    console.log("\n** Log Level can be set by env var BATCH_LOGGER_CONFIG **");
+    console.log("** Possible values are: info, debug, warn, error, fatal **\n");
     log.debug("filePath = " + filePath);
     log.debug("options = " + JSON.stringify(options));
     log.debug("jobservice : " + jobService);
@@ -359,6 +361,7 @@ function getAccessToken(options, cb) {
     }
 }
 
+//16
 /**
  * This function updates an existing BatchRun record with the current statistics (totalRecordCount,
  * successCount and failureCount), and also any error that might have occurred before staring
@@ -399,6 +402,7 @@ function updateBatchRun(error, cb6) {
     }
 }
 
+//17
 /**
  * This function is the "job" submitted to the Limiter for throttled execution. The Limiter executes
  * this function with the parameters supplied to it, which are as follows:
@@ -415,7 +419,7 @@ function updateBatchRun(error, cb6) {
 function runJob(jobService, recData, cb3) {
     log.debug("runJob started for : " + JSON.stringify(recData));
 
-    // Calling the jobService.onEachRecord(..) function to get the next record via callback, as a JSON (payload) for processing
+//18// Calling the jobService.onEachRecord(..) function to get the next record via callback, as a JSON (payload) for processing
     // 'payload' would contain a property called 'json', which is a json representation of the current record
     // The value of 'json' should be formatted as a valid payload for passing to the oe-cloud API specified by 'modelAPI' 
     jobService.onEachRecord(recData, function cb2(payload, err) {
@@ -475,7 +479,7 @@ function runJob(jobService, recData, cb3) {
         log.debug(opts.method + "ing " + JSON.stringify(opts.body) + " to " + opts.url);
         try {
 
-            // Make the request to oe-cloud API and return the result via callback cb3
+//19        // Make the request to oe-cloud API and return the result via callback cb3
             request(opts, function(error, response, body) {
                 var status =  (error || (response && response.statusCode) !== 200) ? "FAILED" : "SUCCESS";
                 if(response && response.statusCode === 401) log.error("Check access_token/credentials. Expired/wrong?");
@@ -504,5 +508,5 @@ function runJob(jobService, recData, cb3) {
     });
 }
 
-// export the processFile(..) function and make it available to clients
+//20 // export the processFile(..) function and make it available to clients
 exports.processFile = processFile;
