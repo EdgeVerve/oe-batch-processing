@@ -29,7 +29,7 @@ Example config:
     "excludeFileRecordFromStatus": false
 }
 */
-var config;
+var config, progressInterval, startTime, endTime, pCount = 0;
 try {
     config = require('./config.json');
 } catch(e) { log.warn("No config file found. Using default values for batch processing configuration"); 
@@ -140,8 +140,12 @@ function processFile(filePath, options, jobService, cb) {
             log.debug("jobService.onEnd finished, calling processFile cb");
 
             // After onEnd(..) returns (at the end of the run), Updating the previously inserted BatchRun record with stats 
-            updateBatchRun(undefined, function() { cb(); });
+            updateBatchRun(undefined, function() { 
+                cb(); 
+            });
             running = false;
+            console.log("***************** PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (endTime - startTime)/1000 + " sec. *****************");
+            clearInterval(progressInterval);
         });
     });
 
@@ -163,7 +167,7 @@ function processFile(filePath, options, jobService, cb) {
 
             // generate id for new BatchRun
             batchRunId = uuidv4();
-            var startTime = new Date();  // for batchRun record
+            startTime = new Date();  // for batchRun record
             var batchRunDetails = {id: batchRunId, startTimeMillis: startTime.getTime(), startTime: startTime, filePath: filePath, options: options};
             var opts = {
                 url: appBaseURL + "/api/BatchRuns" + (access_token ? "?access_token=" + access_token : ""),
@@ -194,6 +198,12 @@ function processFile(filePath, options, jobService, cb) {
 
                         jobService.options = options;
                         var lineNr = 0;
+
+                        // Show progress at regular intervals
+                        progressInterval = setInterval(function() {
+                            console.log("***************** PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (++pCount) * (config.progressInterval || 10000)/1000 + " sec. *****************");
+                        }, config.progressInterval || 10000);
+
 
 //11                    // Read the specified file as a stream, and process it line by line
                         var s = fs.createReadStream(filePath).pipe(es.split()).pipe(es.mapSync(function(rec) {
@@ -248,7 +258,7 @@ function processFile(filePath, options, jobService, cb) {
                                             }
                                             if(!running) {
                                                 var end = new Date().getTime();
-                                                console.log("Batch took " + ((end - start)/1000) + " sec");
+                                                console.log("\nBatch took " + ((end - start)/1000) + " sec\n");
                                                 running = true; // reset running status so as to not enter this "if" multiple times 
                                             }
                                         });
@@ -370,7 +380,7 @@ function getAccessToken(options, cb) {
  * @param {function} cb6 - a callback function that is called upon completion of the BatchRun update.
  */
 function updateBatchRun(error, cb6) {
-    var endTime = new Date();
+    endTime = new Date();
     var batchRunStats = {_version: batchRunVersion, endTimeMillis: endTime.getTime(), endTime: endTime, totalRecordCount: totalRecordCount, successCount: successCount, failureCount: failureCount, error: error};
     var opts = {
         url: appBaseURL + "/api/BatchRuns/" + batchRunId + (access_token ? "?access_token=" + access_token : ""),
