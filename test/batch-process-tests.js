@@ -23,8 +23,8 @@ describe("batch-processing-tests", function () {
     it('should call processFile', function (done) {
         log.debug("calling processFile");
 
-        var filePath = "test/testdata.1.txt";
-//        var filePath = "D:/1k.txt";
+//        var filePath = "test/testdata.1.txt";
+        var filePath = "D:/1k.txt";
 //        var filePath = "D:/20k.txt";
 //        var filePath = "D:/100mil.txt";
         var options = { 
