@@ -1,14 +1,15 @@
-// Catch uncaught exceptions of nodejs, especially
+//1 // Catch uncaught exceptions of nodejs, especially
 // fileNotFound, which cannot be trapped by try..catch
 process.on('uncaughtException', function (err) {
     updateBatchRun(err, function() {    // Update BatchRun with current status and exception
         log.error("There was an uncaught exception:");
         log.error(JSON.stringify(err));
+        console.log(err);
         process.exit(1);
     });
 });
 
-// Set log level programmatically using our own env var BATCH_LOGGER_CONFIG
+//2 // Set log level programmatically using our own env var BATCH_LOGGER_CONFIG
 // if it is set, but not LOGGER_CONFIG
 // e.g., set BATCH_LOGGER_CONFIG=debug  for setting log level to debug
 if(!process.env["LOGGER_CONFIG"] && process.env["BATCH_LOGGER_CONFIG"]) {
@@ -16,7 +17,7 @@ if(!process.env["LOGGER_CONFIG"] && process.env["BATCH_LOGGER_CONFIG"]) {
 }
 var log = require('oe-logger')('batch-processing');
 
-// Read our config file
+//3 // Read the batch processing config file
 /*
 Example config:
 {
@@ -34,11 +35,13 @@ try {
 } catch(e) { log.warn("No config file found. Using default values for batch processing configuration"); 
 }
 
+
+//4 // Libraries required by this module
+
 // Used to create id for the BatchRun record that we will be creating
 // for each run of the processFile(..) function
 var uuidv4 = require('uuid/v4');
 
-// Libraries required by this module
 var fs = require('fs')
 var es = require('event-stream');
 var request = require('request');
@@ -48,29 +51,35 @@ var bottleNeckConfig = { maxConcurrent: process.env["MAX_CONCURRENT"] ||
                         (config && config.maxConcurrent) || 80, 
                         minTime: process.env["MIN_TIME"] || 
                         (config && config.minTime) || 20 };
-log.debug("BottleNeck Config: " + JSON.stringify(bottleNeckConfig));                        
+log.debug("BottleNeck Config: " + JSON.stringify(bottleNeckConfig));
+
+// the module-object used to queue jobs and execute them with rate-limiting/throttling 
 const limiter = new Bottleneck(bottleNeckConfig);
+
 var BATCH_RESULT_LOG_ITEMS = process.env["BATCH_RESULT_LOG_ITEMS"] || (config && config.batchResultLogItems) || "";
 var appBaseURL, access_token, batchRunId, batchRunVersion, totalRecordCount = 0, successCount = 0, failureCount = 0;
 var running = false;
 
+
+//5
 /**
- * This function is exported from this module, and is the one that needs to be
+ * This function is exported from this batch-processing module, and is the one that needs to be
  * called by clients who wish to batch-process files
  * 
  * parameters to be passed are as follows:
+ * 
  * filePath - fully qualified fileName (with path) of the data-file to be processed
- * options - Object containing the following properties:
+ * @param {object} options - Object containing the following properties:
  *              * ctx - Object containing username, password, tenantId, access_token (ignored if username is present)
  *              * appBaseURL - URL of oe-cloud app where data will be posted, e.g., 'http://localhost:3000'
  *              * modelAPI - API of Model where file data will be posted, e.g., '/api/Literals' (optional, can also be specified via payload)
  *              * method - HTTP method to be used for the processing - 'POST' / 'PUT' / 'GET' or 'DELETE'
  *              * headers - additional headers, if any, that need to be passed while making the request (optional)
- * jobService - object containing the following properties:
- *              * onStart - a function taking a single callback function as a parameter. (optional) 
- *              * onEnd   - a function taking a single callback function as a parameter. (optional)
- *              * onEachRecord - a function taking two parameters - recData (object), cb (callback function). This is mandatory.
- * cb - callback function                      
+ * @param {object} jobService - object containing the following properties:
+ *              * @property {function} onStart - a function taking a single callback function as a parameter. (optional) 
+ *              * @property {function} onEnd   - a function taking a single callback function as a parameter. (optional)
+ *              * @property {function} onEachRecord - a function taking two parameters - recData (object), cb (callback function). This is mandatory.
+ * @param {function} cb - callback function - gets called when all processing is finished                     
  */ 
 function processFile(filePath, options, jobService, cb) {
     running = true;
@@ -80,7 +89,7 @@ function processFile(filePath, options, jobService, cb) {
     log.debug("options = " + JSON.stringify(options));
     log.debug("jobservice : " + jobService);
 
-    // Some sanity checks
+//6 // Some sanity checks
     if(!filePath || filePath.trim().length === 0) {
         log.fatal("filePath is not specified. Aborting processing.");
         process.exit(1);
@@ -120,7 +129,7 @@ function processFile(filePath, options, jobService, cb) {
     });
 
 
-    // Subscribing to IDLE state of limiter
+//7 // Subscribing to IDLE state of limiter
     limiter.on('idle', function () {
         log.debug("LIMITER is IDLE. calling jobService.onEnd()");
 
@@ -134,10 +143,10 @@ function processFile(filePath, options, jobService, cb) {
         });
     });
 
-//0 // This is where it all begins: Calling onStart(..)
+//8 // This is where it all begins: Calling onStart(..)
     jobService.onStart(function(startOpts) {
 
-//1     // First, get the access_token, without which we cannot proceed
+//9     // First, get the access_token, without which we cannot proceed
         // if successfully obtained, access_token will be set as options.ctx.access_token2
         getAccessToken(options, function() {
             access_token = options && options.ctx && options.ctx.access_token2;          // store into global variable
@@ -147,7 +156,7 @@ function processFile(filePath, options, jobService, cb) {
                 process.exit(1);
             }
 
-//2         // Insert a new batchRun record that captures the parameters passed to processFile(..) 
+//10        // Insert a new batchRun record that captures the parameters passed to processFile(..) 
             // and also the statistics at the end of the process run
 
             // generate id for new BatchRun
@@ -184,14 +193,14 @@ function processFile(filePath, options, jobService, cb) {
                         jobService.options = options;
                         var lineNr = 0;
 
-//3                     // Read the specified file as a stream, and process it line by line
+//11                    // Read the specified file as a stream, and process it line by line
                         var s = fs.createReadStream(filePath).pipe(es.split()).pipe(es.mapSync(function(rec) {
                                 s.pause();
                                 lineNr += 1;
                                 log.debug("submitting job for rec#: " + lineNr);
                                 var recData = {fileName: filePath, rec: rec, recId: lineNr};
 
-//4                             // Here, we're queuing (submitting) the jobs to the "limiter", one job for each line in the file
+//12                            // Here, we're queuing (submitting) the jobs to the "limiter", one job for each line in the file
                                 // The "limiter" executes the jobs at a rate based of rate limit parameters in config. Parameters to
                                 // submit are as follows:
                                 // expiration - timeout for job
@@ -201,13 +210,13 @@ function processFile(filePath, options, jobService, cb) {
                                 // Limiter executes runJob with the above 3 parameters.
                                 limiter.submit({expiration: 20000, id: lineNr}, runJob, jobService, recData, function(result) {
 
-//5                                 // Here, we're in the callback. We reach this point once a job (i.e., processing a single record) finishes
+//13                                // Here, we're in the callback. We reach this point once a job (i.e., processing a single record) finishes
                                     // 'result' holds the result of execution of the job
                                     if(result.status === "FAILED") log.debug("Error while posting record: " + JSON.stringify(result));
                                     else log.debug("Successfully processed record: " + JSON.stringify(result));
 
 
-//6                                 // Now we're going to save the result of execution of the job to the BatchStatus model of the oe-cloud app
+//14                                // Now we're going to save the result of execution of the job to the BatchStatus model of the oe-cloud app
                                     var opts = {
                                         url: appBaseURL + "/api/BatchStatus" + (access_token ? "?access_token=" + access_token : ""),
                                         method: "POST",
@@ -268,8 +277,9 @@ function processFile(filePath, options, jobService, cb) {
     });
 }
 
+//15
 /**
- * This function tries to obtain the access_token from on of the following, in this order - 
+ * This function tries to obtain the access_token from on of the following, in the following order - 
  *     - environment variable ACCESS_TOKEN
  *     - login using options.ctx.username, options.ctx.password and options.ctx.tenantId
  *     - options.ctx.access_token
@@ -277,18 +287,20 @@ function processFile(filePath, options, jobService, cb) {
  * If found from one of the above, this function sets the access_token as options.ctx.access_token2
  * "access_token2" is used as "access_token" is reserved for user-specified access token.
  * 
- * @param {*} options 
- * @param {*} cb 
+ * @param {object} options 
+ * @param {function} cb 
  */
 function getAccessToken(options, cb) {
     log.debug("Trying to get access_token");
 
+    // First, try to get access token from environment variable
     var access_token = process.env["ACCESS_TOKEN"];
     if(access_token) { 
         log.debug("access_token taken from env variable ACCESS_TOKEN");
         options.ctx.access_token2 = access_token;
         return cb();
     }
+    // then see if username is specified in options. If so, try login
     else if(options && options.ctx && options.ctx.username)
     {
         log.debug("Found username in options.ctx. Will try login for obtaining access_token");
@@ -313,7 +325,7 @@ function getAccessToken(options, cb) {
         log.debug("POSTing user credentials for obtaining access_token");
         try {
             request(opts, function(error, response, body) {
-                if(response.statusCode !== 200) {
+                if(response && response.statusCode !== 200) {
                     log.fatal("Error received after posting user credentials: ERROR: " + JSON.stringify(error) + " RESPONSE: " + JSON.stringify(response));
                     process.exit(1);
                 } else {
@@ -323,7 +335,7 @@ function getAccessToken(options, cb) {
                         options.ctx.access_token2 = access_token;
                         return cb();
                     } else {
-                        log.fatal("Could not get access_token by login: RESPONSE: " + JSON.stringify(response));
+                        log.fatal("Could not get access_token by login: ERROR: " + JSON.stringify(error) + " RESPONSE: " + JSON.stringify(response));
                         process.exit(1);
                     }
                 }
@@ -333,7 +345,9 @@ function getAccessToken(options, cb) {
             log.warn("Could not post user credentials: ERROR: " + JSON.stringify(e));
             process.exit(1);
         }
-    } else {
+    } 
+    // finally, try to get access token directly from options
+    else {
         log.debug("username is not specified in options.ctx. Won't try to login");
         access_token =  (options && options.ctx && options.ctx.access_token);
         if(access_token) {
@@ -345,7 +359,13 @@ function getAccessToken(options, cb) {
     }
 }
 
-
+/**
+ * This function updates an existing BatchRun record with the current statistics (totalRecordCount,
+ * successCount and failureCount), and also any error that might have occurred before staring
+ * the file processing
+ * @param {object} error - an object giving details of any error that might have occurred before starting file processing
+ * @param {function} cb6 - a callback function that is called upon completion of the BatchRun update.
+ */
 function updateBatchRun(error, cb6) {
     var endTime = new Date();
     var batchRunStats = {_version: batchRunVersion, endTimeMillis: endTime.getTime(), endTime: endTime, totalRecordCount: totalRecordCount, successCount: successCount, failureCount: failureCount, error: error};
@@ -379,10 +399,28 @@ function updateBatchRun(error, cb6) {
     }
 }
 
-
+/**
+ * This function is the "job" submitted to the Limiter for throttled execution. The Limiter executes
+ * this function with the parameters supplied to it, which are as follows:
+ * @param {object} jobService - An object passed to processFile(..) function - see processFile(..) above
+ * @param {object} recData - An object containing the details of the current record for processing.
+ *                           It has the following properties:
+ *                           @property {string} fileName - Name of the file being processed
+ *                           @property {string} rec - The current line from the file, for processing
+ *                           @property {number} recId - The line number (in the file) of the current line 
+ * @param {function} cb3 - A callback function that is called after processing the current line. It takes a
+ *                         @param {object} result - object containing results of execution
+ * 
+ */
 function runJob(jobService, recData, cb3) {
     log.debug("runJob started for : " + JSON.stringify(recData));
+
+    // Calling the jobService.onEachRecord(..) function to get the next record via callback, as a JSON (payload) for processing
+    // 'payload' would contain a property called 'json', which is a json representation of the current record
+    // The value of 'json' should be formatted as a valid payload for passing to the oe-cloud API specified by 'modelAPI' 
     jobService.onEachRecord(recData, function cb2(payload, err) {
+        
+        // Get base URL of oe-cloud app
         var appBaseURL = process.env["APP_BASE_URL"] || payload && payload.appBaseURL || (jobService.options && jobService.options.appBaseURL);
         if(!appBaseURL) {
             var msg = "appBaseURL is neither specified in processFile options nor passed in payload. Aborting job.";
@@ -390,6 +428,7 @@ function runJob(jobService, recData, cb3) {
             updateBatchRun(msg, function() { process.exit(1); });
         }
 
+        // Get access token
         var access_token = jobService.options && jobService.options.ctx && jobService.options.ctx.access_token2;
         if(!access_token) log.warn("Neither access_token is provided in env var (ACCESS_TOKEN) / options.ctx / payload.ctx nor user-credentials are provided in options.ctx");
         if(!payload || err) {
@@ -399,12 +438,15 @@ function runJob(jobService, recData, cb3) {
             return cb3(retStatus);
         }
 
+        // Get the oe-cloud API to be called
         var api = (payload.modelAPI ? payload.modelAPI : (jobService.options && jobService.options.modelAPI));
         if(!api) {
             var msg = "modelAPI is neither specified in processFile options nor passed in payload. Aborting job."
             log.fatal(msg);
             updateBatchRun(msg, function() { process.exit(1); });
         }
+
+        // Form the URL and get the method and headers
         var url = appBaseURL + (api.startsWith("/") ? "" : "/") + api + (access_token ? "?access_token=" + access_token : "");
         var method = payload.method || (jobService.options && jobService.options.method);
         if(!method) {
@@ -412,7 +454,6 @@ function runJob(jobService, recData, cb3) {
             log.fatal(msg);
             updateBatchRun(msg, function() { process.exit(1); });
         }
-
         var headers = { 'Cookie': 'Content-Type=application/json; charset=encoding; Accept=application/json' };
         var additionalHeaders = (payload.headers ? payload.headers : (jobService.options && jobService.options.headers));
         if(additionalHeaders) {
@@ -421,6 +462,7 @@ function runJob(jobService, recData, cb3) {
             });
         }
 
+        // Request options
         var opts = {
             url: url,
             method: method,
@@ -432,6 +474,8 @@ function runJob(jobService, recData, cb3) {
         };
         log.debug(opts.method + "ing " + JSON.stringify(opts.body) + " to " + opts.url);
         try {
+
+            // Make the request to oe-cloud API and return the result via callback cb3
             request(opts, function(error, response, body) {
                 var status =  (error || (response && response.statusCode) !== 200) ? "FAILED" : "SUCCESS";
                 if(response && response.statusCode === 401) log.error("Check access_token/credentials. Expired/wrong?");
@@ -460,5 +504,5 @@ function runJob(jobService, recData, cb3) {
     });
 }
 
-
+// export the processFile(..) function and make it available to clients
 exports.processFile = processFile;
