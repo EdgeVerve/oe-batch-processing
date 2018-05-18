@@ -9,6 +9,7 @@ process.on('uncaughtException', function (err) {
     });
 });
 
+
 //2 // Set log level programmatically using our own env var BATCH_LOGGER_CONFIG
 // if it is set, but not LOGGER_CONFIG
 // e.g., set BATCH_LOGGER_CONFIG=debug  for setting log level to debug
@@ -68,7 +69,7 @@ var running = false;
  * 
  * parameters to be passed are as follows:
  * 
- * filePath - fully qualified fileName (with path) of the data-file to be processed
+ * @param {string} filePath - fully qualified fileName (with path) of the data-file to be processed
  * @param {object} options - Object containing the following properties:
  *              * ctx - Object containing username, password, tenantId, access_token (ignored if username is present)
  *              * appBaseURL - URL of oe-cloud app where data will be posted, e.g., 'http://localhost:3000'
