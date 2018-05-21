@@ -114,39 +114,42 @@ The details of these config parameters is given below:
 A sample usage of the *oe-cloud batch-processing* module is shown below:
 
 ```javascript
-var filePath = 'test/testdata.txt';
 
-var options = { 
-        //ctx: {access_token: 'P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx'},
-        ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},
-        appBaseURL: 'http://localhost:3000',
-        modelAPI: '/api/Literals',
-        method: 'POST',
-        headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}          
+var batchProcessing = require('batch-processing');   // require the batch-processing module
+
+var filePath = 'test/testdata.txt';   // File to process
+
+var options = {                       // options object
+        //ctx: {access_token: 'P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx'},      // ignored if user credentials are passed
+        ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},                      // supercedes access_token
+        appBaseURL: 'http://localhost:3000',                                                            // ignored if appBaseURL is present in payload
+        modelAPI: '/api/Literals',                                                                      // ignored if modelAPI is present in payload
+        method: 'POST',                                                                                 // ignored if method is present in payload
+        headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}  // ignored if headers is present in payload      
     };
 
 var jobService = {
 
-    onStart: function onStart (cb) { cb({}); },
+    onStart: function (cb) { cb({}); },            // onStart is optional
     
-    onEnd: function onEnd (cb) { cb(); },
+    onEnd: function (cb) { cb(); },                // onEnd is optional
     
-    onEachRecord: function onEachRecord (recData, cb) {
+    onEachRecord: function (recData, cb) {         // onEachRecord is mandatory
+    
         var json = {'key': recData.rec.split(' ')[0], 'value': recData.rec.split(' ')[1]};  // logic to convert file record (string) to oe-cloud processable object
+
         var payload = {
                 json: json,
-                //modelAPI: '/api/Literals',
-                //method: "POST",
-                //headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'} 
+                //modelAPI: '/api/Literals',                   // if specified here, supercedes modelAPI in options
+                //method: "POST",                              // if specified here, supercedes method in options
+                //headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}   // if specified here, supercedes headers in options
             };
 
-        cb(payload, payload ? null : 'Couldn't get payload for recId ' + (recData && recData.recId));
+        cb(payload, payload ? null : "Couldn't get payload for recId " + (recData && recData.recId));  // Send payload via callback function
     }
 };
 
-var batchProcessing = require('batch-processing');
-
-batchProcessing.processFile(filePath, options, jobService, function() {
+batchProcessing.processFile(filePath, options, jobService, function() {   // call the processFile(..) function to start the batch processing
     console.log("file processed successfully");
 });
 
