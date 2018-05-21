@@ -74,16 +74,16 @@ The `processFile(..)` function takes the following arguments, which need to be p
 
 The processFile ( ... ) function does the following in sequence -
 
-1. First, it calls jobService.onStart() 
-2. Gets access token
-3. Creates a record in BatchRun for the current run with the data passed to processFile(..) 
-4. Reads the file, and queue the runJob(..) function with parameters jobService and recData, once for each record in the file
-5. Now, the queue is processed by executing the runJob(..) function with its arguments in a parallel, but rate-limited/throttled manner. 
-6. Inside the runJob(..) function, jobService.onEachRecord(..) is called to obtain the JSON representation of recData.rec and api details 
-7. The oe-cloud API is called and the result is logged to the BatchStatus model via a separate API call.
+1. First, it calls `jobService.onStart() `
+2. Gets `access_token`
+3. Creates a record in `BatchRun` model for the current run with the data passed to `processFile(..) `
+4. Reads the file, and queue the `runJob(..)` function with parameters `jobService` and `recData`, once for each record in the file
+5. Now, the queue is processed by executing the `runJob(..)` function with its arguments in a parallel, but rate-limited/throttled manner. 
+6. Inside the `runJob(..)` function, `jobService.onEachRecord(..)` is called to obtain the JSON representation of `recData.rec` and api details 
+7. The *oe-cloud* API is called and the result is logged to the `BatchStatus` model via a separate API call.
 8. Steps 6-7 is repeated till the queue is completely processed. 
-9. After all records are processed, the jobService.onEnd()
-10. Updates BatchRun with statistics of the run
+9. After all records are processed, the `jobService.onEnd()` function is called
+10. Updates `BatchRun` model with statistics of the run
 
 
 ## Configuration
