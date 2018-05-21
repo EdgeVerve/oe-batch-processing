@@ -15,7 +15,7 @@ This ensures that -
 1. all business validations and rules are applied for each record during the insert/update
 2. the application processing is load-balanced automatically, taking advantage of the application's infrastructure.
 
-Considering the above, the oe-cloud batch-processing solution is built as a nodejs module (not included in oe-cloud framework). 
+Considering the above, the oe-cloud batch-processing solution is built as a separate nodejs module (not included in oe-cloud framework). 
 It can be "required" and its main function called by anyone (for e.g., by a batch client,or a batch scheduler, Node-RED, etc.,) 
 who wishes to start a batch job for processing a file containing text data, one record per line.
 
