@@ -5,9 +5,9 @@ There is a requirement in many applications to load data into the application da
 
 ## Solution
 
-Since file reading and processing is very processor intensive, the batch processing module is kept separate from the oe-cloud app, and it is run in a separate NodeJS VM. 
-This also means that the batch-processing module can be scaled separately.
-The module uses http REST API of the oe-cloud application to load the data into the application database. 
+Since file reading and processing is very processor intensive, the *batch-processing* module is kept separate from the *oe-cloud* application, and it is run in a separate *NodeJS* VM. 
+This also means that the *batch-processing* module can be scaled separately.
+The module uses http REST API of the *oe-cloud* application to load the data into the application database. 
 
 This ensures that -
 
@@ -15,13 +15,13 @@ This ensures that -
 1. all business validations and rules are applied for each record during the insert/update
 2. the application processing is load-balanced automatically, taking advantage of the application's infrastructure.
 
-Considering the above, the oe-cloud batch-processing solution is built as a separate nodejs module (not included in oe-cloud framework). 
-It can be "required" and its main function called by anyone (for e.g., by a batch client,or a batch scheduler, Node-RED, etc.,) 
+Considering the above, the oe-cloud batch-processing solution is built as a separate nodejs module (not included in the *oe-cloud* framework). 
+It can be "required" and its main function called by anyone (for e.g., by a batch client, or a batch scheduler or Node-RED, etc.,) 
 who wishes to start a batch job for processing a file containing text data, one record per line.
 
 ## Implementation
 
-The oe-cloud batch-processing module is available at http://evgit/oecloud.io/batch-processing. 
+The *oe-cloud batch-processing* module is available at http://evgit/oecloud.io/batch-processing. 
 
 This module exports a `processFile ( filePath, options, jobService, cb )` function - to be called by a batch client who wishes to start a batch job.
 
