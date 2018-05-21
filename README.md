@@ -32,8 +32,8 @@ The `processFile(..)` function takes the following arguments, which need to be p
 
 * **options** - Object containing the following properties:
 
-    * *ctx* - Object containing `username`, `password`, `tenantId`, `access_token`. 
-    `access_token` in `options.ctx` is ignored if `username` is present in `options.ctx`. It is also overridden if it is supplied in the environment variable `ACCESS_TOKEN`.
+    * *ctx* - Object containing `username`, `password`, `tenantId`, `access_token`. User credentials (`username`, `password`, `tenantId`) supercede `access_token`.
+    i.e., `access_token` is ignored if `username` is present. Both `access_token` (in options.ctx) and user credentials (`username`, `password`, `tenantId`) are overridden by the environment variable `ACCESS_TOKEN`.
    
     * *appBaseURL* - URL of oe-cloud app where data will be posted, e.g., 'http://localhost:3000' This is overridden if *appBaseURL* is specified in `payload` (see below)
    
@@ -117,7 +117,7 @@ A few other configurations are as follows:
 |Config Property|Description|
 |--------|-----------|
 |environment variable `BATCH_LOGGER_CONFIG`|Sets log level to one of *trace*, *debug*, *warn*, *error*, or *info*, if oe-cloud's LOGGER_CONFIG is not set|
-|environment variable `ACCESS_TOKEN`|Overrides `access_token` that may be set in `options.ctx`. `ACCESS_TOKEN` in environment variable also supercedes any user credentials supplied in `options`.|
+|environment variable `ACCESS_TOKEN`|Overrides `access_token` that may be set in `options.ctx`. `ACCESS_TOKEN` in environment variable also supercedes any user credentials supplied in `options.ctx`.|
 
 
 ## Sample Usage
