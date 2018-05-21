@@ -86,3 +86,30 @@ The processFile ( ... ) function does the following in sequence -
 
 
 ## Configuration
+
+The *oe-cloud batch-processing* module can be configured usind a config.json file at the root of the module. This config file has the following structure:
+
+```json
+{
+    "maxConcurrent": 80, 
+    "minTime": 20,
+    "batchResultLogItems": "",
+    "appBaseURL": "http://localhost:3000"
+}
+```
+
+This config file is optional, and default values are provided for some of the config parameters. The file config parameters can be overridden by environment variables.
+The details of these config parameters is given below:
+
+
+|Property|Description|Default Value| Overriding Environment Variable|
+|--------|-----------|-------------|--------------------------------|
+|maxConcurrent|determines the maximum number of jobs that are run in parallel.|80|MAX_CONCURRENT|
+|minTime |determines how long to wait in milliseconds after launching a job before launching another one.|20|MIN_TIME|
+|batchResultLogItems|a comma separated list of items that can be included in the default response that is logged to DB. Possible values in this list are: *error.details*, *error.stack*, *response.headers*| "" | BATCH_RESULT_LOG_ITEMS |
+|appBaseURL|URL of oe-cloud app where data will be posted. This would be used if `appBaseURL` is not present in `options` passed to `processFile(..)` by the batch client. e.g., 'http://localhost:3000'. | undefined | APP_BASE_URL|
+
+
+
+
+
