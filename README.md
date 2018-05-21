@@ -34,13 +34,13 @@ The `processFile(..)` function takes the following arguments, which need to be p
 
     * *ctx* - Object containing `username`, `password`, `tenantId`, `access_token` (access_token is ignored if username is present)
    
-    * *appBaseURL* - URL of oe-cloud app where data will be posted, e.g., 'http://localhost:3000'
+    * *appBaseURL* - URL of oe-cloud app where data will be posted, e.g., 'http://localhost:3000' This is overridden if *appBaseURL* is specified in `payload` (see below)
    
-    * *modelAPI* - API of Model where file data will be posted, e.g., '/api/Literals' (optional, can also be specified via payload)
+    * *modelAPI* - API of Model where file data will be posted, e.g., '/api/Literals' (optional, can also be specified via payload). This is overridden if *modelAPI* is specified in `payload` (see below)
    
-    * *method* - HTTP method to be used for the processing - 'POST' / 'PUT' / 'GET' or 'DELETE'
+    * *method* - HTTP method to be used for the processing - 'POST' / 'PUT' / 'GET' or 'DELETE'. This is overridden if *method* is specified in `payload` (see below)
    
-    * *headers* - additional headers, if any, that need to be passed while making the request (optional)
+    * *headers* - additional headers, if any, that need to be passed while making the request (optional). This is overridden if *headers* is specified in `payload` (see below)
 
 
 * **jobService** - object containing the following properties:
@@ -61,9 +61,9 @@ The `processFile(..)` function takes the following arguments, which need to be p
             * *Payload* (object) consists of the folowing properties:
             
                 * *json* (object)     - A JSON representation of the file record (recData.rec) suitable for POSTing to the oe-cloud application.
-                * *modelAPI* (string) - The oe-cloud REST API to which the data needs to be POSTed, e.g., '/api/Literals'
-                * *method* (string)   - The http verb to be used for calling the modelAPI, e.g., 'POST' / 'PUT' 
-                * *headers* (object)  - optional request headers to be added while calling modelAPI
+                * *modelAPI* (string) - The oe-cloud REST API to which the data needs to be POSTed, e.g., '/api/Literals'. This overrides *modelAPI* if specified in options (see above)
+                * *method* (string)   - The http verb to be used for calling the modelAPI, e.g., 'POST' / 'PUT'. This overrides *method* if specified in options (see above) 
+                * *headers* (object)  - optional request headers to be added while calling modelAPI. This overrides *headers* if specified in options (see above)
                 
             * *error* (object / string) - Error object or message. This should normally be null when there is a valid payload. 
                         This is assumed to be non-null when a *payload* could not be sent due to some error, and this fact/error needs to be logged. 
@@ -102,12 +102,55 @@ This config file is optional, and default values are provided for some of the co
 The details of these config parameters is given below:
 
 
-|Property|Description|Default Value| Overriding Environment Variable|
+|Config Property|Description|Default Value| Overriding Environment Variable|
 |--------|-----------|-------------|--------------------------------|
 |maxConcurrent|determines the maximum number of jobs that are run in parallel.|80|MAX_CONCURRENT|
 |minTime |determines how long to wait in milliseconds after launching a job before launching another one.|20|MIN_TIME|
 |batchResultLogItems|a comma separated list of items that can be included in the default response that is logged to DB. Possible values in this list are: *error.details*, *error.stack*, *response.headers*| "" | BATCH_RESULT_LOG_ITEMS |
 |appBaseURL|URL of oe-cloud app where data will be posted. This would be used if `appBaseURL` is not present in `options` passed to `processFile(..)` by the batch client. e.g., 'http://localhost:3000'. | undefined | APP_BASE_URL|
+
+
+## Sample Usage
+A sample usage of the *oe-cloud batch-processing* module is shown below:
+
+```javascript
+var filePath = 'test/testdata.txt';
+
+var options = { 
+        //ctx: {access_token: 'P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx'},
+        ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},
+        appBaseURL: 'http://localhost:3000',
+        modelAPI: '/api/Literals',
+        method: 'POST',
+        headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}          
+    };
+
+var jobService = {
+
+    onStart: function onStart (cb) { cb({}); },
+    
+    onEnd: function onEnd (cb) { cb(); },
+    
+    onEachRecord: function onEachRecord (recData, cb) {
+        var json = {'key': recData.rec.split(' ')[0], 'value': recData.rec.split(' ')[1]};  // logic to convert file record (string) to oe-cloud processable object
+        var payload = {
+                json: json,
+                //modelAPI: '/api/Literals',
+                //method: "POST",
+                //headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'} 
+            };
+
+        cb(payload, payload ? null : 'Couldn't get payload for recId ' + (recData && recData.recId));
+    }
+};
+
+var batchProcessing = require('batch-processing');
+
+batchProcessing.processFile(filePath, options, jobService, function() {
+    console.log("file processed successfully");
+});
+
+```
 
 
 
