@@ -72,7 +72,7 @@ The `processFile(..)` function takes the following arguments, which need to be p
                         and this won't be logged.  
 
 
-The processFile ( ... ) function does the following in sequence -
+The `processFile(..)` function does the following in sequence -
 
 1. First, it calls `jobService.onStart() `
 2. Gets `access_token`
