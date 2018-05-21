@@ -32,7 +32,8 @@ The `processFile(..)` function takes the following arguments, which need to be p
 
 * **options** - Object containing the following properties:
 
-    * *ctx* - Object containing `username`, `password`, `tenantId`, `access_token` (access_token is ignored if username is present)
+    * *ctx* - Object containing `username`, `password`, `tenantId`, `access_token`. 
+    `access_token` in `options.ctx` is ignored if `username` is present in `options.ctx`. It is also overridden if it is supplied in the environment variable `ACCESS_TOKEN`.
    
     * *appBaseURL* - URL of oe-cloud app where data will be posted, e.g., 'http://localhost:3000' This is overridden if *appBaseURL* is specified in `payload` (see below)
    
@@ -108,6 +109,15 @@ The details of these config parameters is given below:
 |minTime |determines how long to wait in milliseconds after launching a job before launching another one.|20|MIN_TIME|
 |batchResultLogItems|a comma separated list of items that can be included in the default response that is logged to DB. Possible values in this list are: *error.details*, *error.stack*, *response.headers*| "" | BATCH_RESULT_LOG_ITEMS |
 |appBaseURL|URL of oe-cloud app where data will be posted. This would be used if `appBaseURL` is not present in `options` passed to `processFile(..)` by the batch client.| undefined | APP_BASE_URL|
+
+
+
+A few other configurations are as follows:
+
+|Config Property|Description|
+|--------|-----------|
+|environment variable `BATCH_LOGGER_CONFIG`|Sets log level to one of *trace*, *debug*, *warn*, *error*, or *info*, if oe-cloud's LOGGER_CONFIG is not set|
+|environment variable `ACCESS_TOKEN`|Overrides `access_token` that may be set in `options.ctx`. `ACCESS_TOKEN` in environment variable also supercedes any user credentials supplied in `options`.|
 
 
 ## Sample Usage
