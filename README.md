@@ -83,7 +83,7 @@ The `processFile(..)` function does the following in sequence -
 5. Now, the queue is processed by executing the `runJob(..)` function with its arguments in a parallel, but rate-limited/throttled manner. 
 6. Inside the `runJob(..)` function, `jobService.onEachRecord(..)` is called to obtain the JSON representation of `recData.rec` and api details 
 7. The *oe-cloud* API is called and the result is logged to the `BatchStatus` model via a separate API call.
-8. The  `jobService.onEachResult(..)` functtion is called with teh result of record processing as argument
+8. The  `jobService.onEachResult(..)` functtion is called with the result of record processing as argument
 9. Steps 6-8 is repeated till the queue is completely processed. 
 10. After all records are processed, the `jobService.onEnd()` function is called
 11. Updates `BatchRun` model with statistics of the run
@@ -159,7 +159,9 @@ var jobService = {
             };
 
         cb(payload, payload ? null : "Couldn't get payload for recId " + (recData && recData.recId));  // Send payload via callback function
-    }
+    },
+    onEachResult: function onEachResult (result) { console.log("Inside jobService.onEachResult: " + JSON.stringify(result)); }
+    
 };
 
 batchProcessing.processFile(filePath, options, jobService, function() {   // call the processFile(..) function to start the batch processing
