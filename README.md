@@ -52,6 +52,8 @@ The `processFile(..)` function takes the following arguments, which need to be p
     This function is implemented by the client, and it should have the logic to convert the record data (from file) sent to it via `recData.rec`
     to a valid JSON for posting to the *oe-cloud* application.
     This function takes two parameters - *recData*, *cb* -
+    * **onEachResult** - a  (optional) function taking a single object as argument. This function is called after processing each record, passing the result of processing. 
+    This function is used to notify the client about the result of processing each record.
 
         * *recData* (object) - contains the details of the current record for processing. It has the following properties - *fileName*, *rec*, *recId* :
             * *fileName* (string) - Name of the file being processed
