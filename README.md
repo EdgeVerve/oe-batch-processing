@@ -112,7 +112,7 @@ The details of these config parameters is given below:
 |minTime |determines how long to wait in milliseconds after launching a job before launching another one.|20|MIN_TIME|
 |batchResultLogItems|a comma separated list of items that can be included in the default response that is logged to DB. Possible values in this list are: *error.details*, *error.stack*, *response.headers*| "" | BATCH_RESULT_LOG_ITEMS |
 |appBaseURL|URL of oe-cloud app where data will be posted. This would be used if `appBaseURL` is not present in `options` passed to `processFile(..)` by the batch client.| undefined | APP_BASE_URL|
-
+|progressInterval|Interval in milliseconds at which to pring the progress of file processing in the console|10000|PROGRESS_INTERVAL|
 
 
 A few other configurations are as follows:
