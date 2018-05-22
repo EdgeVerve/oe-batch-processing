@@ -42,8 +42,11 @@ try {
 // for each run of the processFile(..) function
 var uuidv4 = require('uuid/v4');
 
-var fs = require('fs')
+var fs = require('fs');
+var readline = require('readline');
+var stream = require('stream');
 var es = require('event-stream');
+var LineByLineReader = require('line-by-line');
 var request = require('request');
 // Module that manages the rate-limiting or throttling of the file processing
 const Bottleneck = require("bottleneck");
@@ -57,7 +60,7 @@ log.info("BottleNeck Config: " + JSON.stringify(bottleNeckConfig));
 const limiter = new Bottleneck(bottleNeckConfig);
 
 var BATCH_RESULT_LOG_ITEMS = process.env["BATCH_RESULT_LOG_ITEMS"] || (config && config.batchResultLogItems) || "";
-var appBaseURL, access_token, batchRunId, batchRunVersion, totalRecordCount = 0, successCount = 0, failureCount = 0;
+var appBaseURL, access_token, batchRunId, batchRunVersion, totalRecordCount = 0, successCount = 0, failureCount = 0, s;
 var running = false;
 
 
@@ -142,7 +145,8 @@ function processFile(filePath, options, jobService, cb) {
 //7 // Subscribing to IDLE state of limiter
     limiter.on('idle', function () {
         log.debug("LIMITER is IDLE. calling jobService.onEnd()");
-
+        lr.resume();
+        return;
         // When limiter is IDLE, Calling onEnd(..) after all records are processed, i.e., 
         jobService.onEnd(function() {
             log.debug("jobService.onEnd finished, calling processFile cb");
@@ -194,7 +198,7 @@ function processFile(filePath, options, jobService, cb) {
                     var status =  (error || (response && response.statusCode) !== 200) ? "FAILED" : "SUCCESS";
                     if(response && response.statusCode !== 200) {
                         log.error("Error while posting batchRun: ERROR: " + JSON.stringify(error) + " STATUS: " + response.statusCode + " RESPONSE: " + JSON.stringify(response));
-                        if(response.statusCode === 401) log.error("Check access_token/credentials. Expired/wrong?. Aborting processing.");
+                        if(response && response.statusCode === 401) log.error("Check access_token/credentials. Expired/wrong?. Aborting processing.");
                         process.exit(1);
                     } else {
                         batchRunVersion = body && body._version;
@@ -209,13 +213,14 @@ function processFile(filePath, options, jobService, cb) {
 
                         // Show progress at regular intervals
                         progressInterval = setInterval(function() {
-                            console.log("***************** PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (++pCount) * (config.progressInterval || 10000)/1000 + " sec. *****************");
+                            console.log("************* PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (++pCount) * (config.progressInterval || 10000)/1000 + " sec. Limiter Counts: " + JSON.stringify(limiter.counts()) + "*************");
                         }, config.progressInterval || 10000);
 
+                        lr = new LineByLineReader(filePath);
 
 //11                    // Read the specified file as a stream, and process it line by line
-                        var s = fs.createReadStream(filePath).pipe(es.split()).pipe(es.mapSync(function(rec) {
-                                s.pause();
+                            lr.on('line', function (rec) { 
+                                lr.pause();
                                 lineNr += 1;
                                 log.debug("submitting job for rec#: " + lineNr);
                                 var recData = {fileName: filePath, rec: rec, recId: lineNr};
@@ -263,7 +268,7 @@ function processFile(filePath, options, jobService, cb) {
                                             var status =  (error || (response && response.statusCode) !== 200) ? "FAILED" : "SUCCESS";
                                             if(response && response.statusCode !== 200) {
                                                 log.error("Error while posting status: ERROR: " + JSON.stringify(error) + " STATUS: " + JSON.stringify(result) + " RESPONSE: " + JSON.stringify(response));
-                                                if(response.statusCode === 401) log.error("Check access_token/credentials. Expired/wrong?");
+                                                if(response && response.statusCode === 401) log.error("Check access_token/credentials. Expired/wrong?");
                                             } else {
                                                 log.debug("Posted status successfully for " + JSON.stringify(result.payload));
                                             }
@@ -278,17 +283,23 @@ function processFile(filePath, options, jobService, cb) {
                                         log.error("Could not post status: ERROR: " + JSON.stringify(e) + " STATUS: " + JSON.stringify(result));
                                     }
                 
-                                });            
-                                s.resume();
-                            })
-                            .on('error', function(err){   // handle errors while reading file stream
+                                });
+                                            
+                                if(limiter.counts().RECEIVED < 1000) lr.resume();
+                            });
+
+                            lr.on('error', function(err){   // handle errors while reading file stream
                                 log.fatal('Error while reading file.' + JSON.stringify(err));
+                                console.log(err);
                                 updateBatchRun(err, function() { process.exit(1); });
                             })
-                            .on('end', function(){  // handle end of file
+                            lr.on('end', function(){  // handle end of file
                                 log.debug('Read entire file: ' + filePath)
                             })
-                        );
+
+                        // limiter.on('depleted', function () {
+                        //     s.resume();
+                        // });
                     }
                 });
             } catch(e) {
@@ -410,9 +421,10 @@ function updateBatchRun(error, cb6) {
             var status =  (error || (response && response.statusCode) !== 200) ? "FAILED" : "SUCCESS";
             if(response && response.statusCode !== 200) {
                 log.error("Error while PUTing batchRun Stats: ERROR: " + JSON.stringify(error) + " STATUS: " + response.statusCode + " RESPONSE: " + JSON.stringify(response) + " STATS: " + JSON.stringify(batchRunStats));
-                if(response.statusCode === 401) log.error("Check access_token/credentials. Expired/wrong?. Aborting processing.");
+                if(response && response.statusCode === 401) log.error("Check access_token/credentials. Expired/wrong?. Aborting processing.");
                 process.exit(1);
             } else {
+                batchRunVersion = body && body._version;
                 log.debug("Successfully updated batchRun Stats: " + JSON.stringify(body));
             }
             cb6();
@@ -438,6 +450,7 @@ function updateBatchRun(error, cb6) {
  * 
  */
 function runJob(jobService, recData, cb3) {
+
     log.debug("runJob started for : " + JSON.stringify(recData));
 
 //18// Calling the jobService.onEachRecord(..) function to get the next record via callback, as a JSON (payload) for processing
@@ -521,7 +534,7 @@ function runJob(jobService, recData, cb3) {
                 retStatus.statusCode = response && response.statusCode;
                 retStatus.error = error ? (error.message ? error.message : error)  : status === "FAILED" ? response && response.body : undefined;
                 totalRecordCount++;
-                if(response.statusCode === 200) successCount++; else failureCount++;
+                if(response && response.statusCode === 200) successCount++; else failureCount++;
                 try { jobService.onEachResult(retStatus); } catch(e) { log.error("Error after calling jobService.onEachResult(..): " + ((e && e.message) ? e.message : JSON.stringify(e))); }
                 return cb3(retStatus);
             });

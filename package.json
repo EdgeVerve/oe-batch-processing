@@ -9,6 +9,7 @@
   "dependencies": {
     "bottleneck": "^2.3.0",
     "event-stream": "^3.3.4",
+    "line-by-line": "^0.1.6",
     "oe-logger": "^1.0.0",
     "request": "^2.85.0"
   },
