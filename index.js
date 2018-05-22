@@ -1,3 +1,35 @@
+/**
+ *
+ * ©2016-2017 EdgeVerve Systems Limited (a fully owned Infosys subsidiary),
+ * Bangalore, India. All Rights Reserved.
+ *
+ */
+/**
+ * There is a requirement in many applications to load data into the application database from flat (text) files. 
+ * Such a data load should honor all application validations and rules supported by the application for the specific 
+ * type of data being loaded. The data files may contain a large number of records, one record per line. 
+ * A line is assumed to be terminated by a newline (\n) character.
+ *
+ * Since file reading and processing is very processor intensive, the batch-processing module is kept separate 
+ * from the oe-cloud application, and it is run in a separate NodeJS VM. This also means that the batch-processing 
+ * module can be scaled separately. The module uses http REST API of the oe-cloud application to load the data into 
+ * the application database. 
+ * 
+ * This ensures that -
+ * 
+ * 1. all business validations and rules are applied for each record during the insert/update
+ * 2. the application processing is load-balanced automatically, taking advantage of the application's infrastructure.
+ * 
+ * Considering the above, this oe-cloud batch-processing solution is built as a separate nodejs 
+ * module (not included in the oe-cloud framework). 
+ * This module can be "required" and its main function called by anyone (for e.g., by a batch client, 
+ * or a batch scheduler or Node-RED, etc.,) who wishes to start a batch job for processing a file containing 
+ * text data, one record per line.
+
+ * @module batch-processing
+ * @author Ajith Vasudevan
+ */
+
 //1 // Catch uncaught exceptions of nodejs, especially
 // fileNotFound, which cannot be trapped by try..catch
 process.on('uncaughtException', function (err) {
@@ -59,9 +91,16 @@ log.info("BottleNeck Config: " + JSON.stringify(bottleNeckConfig));
 // the module-object used to queue jobs and execute them with rate-limiting/throttling 
 const limiter = new Bottleneck(bottleNeckConfig);
 
+// list of items to log in addition to default items
 var BATCH_RESULT_LOG_ITEMS = process.env["BATCH_RESULT_LOG_ITEMS"] || (config && config.batchResultLogItems) || "";
+log.info("BATCH_RESULT_LOG_ITEMS = " + BATCH_RESULT_LOG_ITEMS);
+
+// Maximum number of jobs tat can be queued before pausing the file reading
+var MAX_QUEUE_SIZE = process.env["MAX_QUEUE_SIZE"] ? Number(process.env["MAX_QUEUE_SIZE"]) : (config && config.maxQueueSize) || 50000;
+log.info("MAX_QUEUE_SIZE = " + MAX_QUEUE_SIZE);
+
 var appBaseURL, access_token, batchRunId, batchRunVersion, totalRecordCount = 0, successCount = 0, failureCount = 0, s;
-var running = false;
+var eof = false;  // Flag that changes state when the file is completely read
 
 
 //5
@@ -86,7 +125,6 @@ var running = false;
  * @param {function} cb - callback function - gets called when all processing is finished                     
  */ 
 function processFile(filePath, options, jobService, cb) {
-    running = true;
     var start = new Date().getTime();       // For logging
     console.log("\n** Starting Batch Processing **");
     console.log("\n** Log Level can be set by env var BATCH_LOGGER_CONFIG **");
@@ -145,9 +183,9 @@ function processFile(filePath, options, jobService, cb) {
 //7 // Subscribing to IDLE state of limiter
     limiter.on('idle', function () {
         log.debug("LIMITER is IDLE. calling jobService.onEnd()");
-        lr.resume();
-        return;
-        // When limiter is IDLE, Calling onEnd(..) after all records are processed, i.e., 
+        if(!eof) { lr.resume(); return; }  // Start queuing records for processing once the current que is processed and the limiter is idle
+
+        // When eof and limiter is IDLE, Calling onEnd(..) after all records are processed, i.e., 
         jobService.onEnd(function() {
             log.debug("jobService.onEnd finished, calling processFile cb");
 
@@ -155,12 +193,14 @@ function processFile(filePath, options, jobService, cb) {
             updateBatchRun(undefined, function() { 
                 cb(); 
             });
-            running = false;
-            console.log("***************** PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (endTime - startTime)/1000 + " sec. *****************");
+            console.log("************* PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (endTime - startTime)/1000 + " sec. Limiter Stats: " + JSON.stringify(limiter.counts()) + " *************");
             clearInterval(progressInterval);
+
+            var end = new Date().getTime();
+            console.log("\nBatch took " + ((end - start)/1000) + " sec\n");
         });
     });
-
+    
 //8 // This is where it all begins: Calling onStart(..)
     jobService.onStart(function(startOpts) {
 
@@ -210,92 +250,91 @@ function processFile(filePath, options, jobService, cb) {
 
                         jobService.options = options;
                         var lineNr = 0;
-
+                        var PROGRESS_INTERVAL = (process.env['PROGRESS_INTERVAL'] ? Number(process.env['PROGRESS_INTERVAL']) : (config.progressInterval || 10000));
                         // Show progress at regular intervals
                         progressInterval = setInterval(function() {
-                            console.log("************* PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (++pCount) * (config.progressInterval || 10000)/1000 + " sec. Limiter Counts: " + JSON.stringify(limiter.counts()) + "*************");
-                        }, config.progressInterval || 10000);
+                            console.log("************* PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (++pCount) * PROGRESS_INTERVAL/1000 + " sec. Limiter Stats: " + JSON.stringify(limiter.counts()) + " *************");
+                        }, PROGRESS_INTERVAL);
 
+                        // Read the specified file, ...
                         lr = new LineByLineReader(filePath);
+//11                    // ... and process it line by line
+                        lr.on('line', function (rec) { 
+                            lr.pause();     // pause reading more lines (i.e., stop this 'line' event) until the current line is queued for processing
+                            lineNr += 1;
+                            log.debug("submitting job for rec#: " + lineNr);
+                            var recData = {fileName: filePath, rec: rec, recId: lineNr};   // create the record data object for submission
 
-//11                    // Read the specified file as a stream, and process it line by line
-                            lr.on('line', function (rec) { 
-                                lr.pause();
-                                lineNr += 1;
-                                log.debug("submitting job for rec#: " + lineNr);
-                                var recData = {fileName: filePath, rec: rec, recId: lineNr};
+//12                        // Here, we're queuing (submitting) the jobs to the "limiter", one job for each line in the file
+                            // The "limiter" executes the jobs at a rate based of rate limit parameters in config. 
+                            // Parameters to submit(..) are as follows:
+                            //  *  expiration - timeout for job
+                            //     id - an id for the job
+                            //  *  runJob           - a function which is treated as the "job" by the Limiter
+                            //  *  jobService,      - parameter to runJob
+                            //  *  recData,         - parameter to runJob
+                            //  *  function(result) - parameter to runJob
+                            // Limiter executes runJob with the above 3 parameters.
+                            limiter.submit({expiration: 20000, id: lineNr}, runJob, jobService, recData, function(result) {
 
-//12                            // Here, we're queuing (submitting) the jobs to the "limiter", one job for each line in the file
-                                // The "limiter" executes the jobs at a rate based of rate limit parameters in config. Parameters to
-                                // submit are as follows:
-                                // expiration - timeout for job
-                                // id - an id for the job
-                                // runJob - a function which is treated as the "job"
-                                // jobService, recData, function(result) - parameters to runJob
-                                // Limiter executes runJob with the above 3 parameters.
-                                limiter.submit({expiration: 20000, id: lineNr}, runJob, jobService, recData, function(result) {
+//13                            // Here, we're in the job's callback. We reach this point once a job (i.e., processing a single record) finishes
+                                // 'result' holds the result of execution of the job
 
-//13                                // Here, we're in the callback. We reach this point once a job (i.e., processing a single record) finishes
-                                    // 'result' holds the result of execution of the job
+                                if(result === null || result === undefined) return;  // Null result means we did not get a payload, so ignoring and not proceeding
 
-                                    if(result === null || result === undefined) return;  // Null result means we did not get a payload, so ignoring and not proceeding
-
-                                    if(result.status === "FAILED") log.debug("Error while posting record: " + JSON.stringify(result));
-                                    else log.debug("Successfully processed record: " + JSON.stringify(result));
+                                if(result.status === "FAILED") log.debug("Error while posting record: " + JSON.stringify(result));
+                                else log.debug("Successfully processed record: " + JSON.stringify(result));
 
 
 //14                                // Now we're going to save the result of execution of the job to the BatchStatus model of the oe-cloud app
-                                    var opts = {
-                                        url: appBaseURL + "/api/BatchStatus" + (access_token ? "?access_token=" + access_token : ""),
-                                        method: "POST",
-                                        body: result,
-                                        json: true,
-                                        timeout: 10000,
-                                        jar: true,
-                                        headers: {
-                                            'Cookie': 'Content-Type=application/json; charset=encoding; Accept=application/json'
-                                        }
-                                    };
-                                    log.debug("POSTing result " + JSON.stringify(result) + " to " + opts.url);
-                                    try {
-                                        request(opts, function(error, response, body) {
-
-                                            // Remove some large objects from the response for better-looking logs
-                                            if(BATCH_RESULT_LOG_ITEMS.indexOf("error.details") === -1 && response && response.body && response.body.error && response.body.error.details) response.body.error.details = undefined;
-                                            if(BATCH_RESULT_LOG_ITEMS.indexOf("error.stack") === -1 && response && response.body && response.body.error && response.body.error.stack) response.body.error.stack = undefined;
-                                            if(BATCH_RESULT_LOG_ITEMS.indexOf("response.headers") === -1 && response && response.headers) response.headers = undefined;
-                                            
-                                            var status =  (error || (response && response.statusCode) !== 200) ? "FAILED" : "SUCCESS";
-                                            if(response && response.statusCode !== 200) {
-                                                log.error("Error while posting status: ERROR: " + JSON.stringify(error) + " STATUS: " + JSON.stringify(result) + " RESPONSE: " + JSON.stringify(response));
-                                                if(response && response.statusCode === 401) log.error("Check access_token/credentials. Expired/wrong?");
-                                            } else {
-                                                log.debug("Posted status successfully for " + JSON.stringify(result.payload));
-                                            }
-                                            if(!running) {
-                                                var end = new Date().getTime();
-                                                console.log("\nBatch took " + ((end - start)/1000) + " sec\n");
-                                                running = true; // reset running status so as to not enter this "if" multiple times 
-                                            }
-                                        });
-                                    } catch(e) {
-                                        failureCount++;
-                                        log.error("Could not post status: ERROR: " + JSON.stringify(e) + " STATUS: " + JSON.stringify(result));
+                                var opts = {
+                                    url: appBaseURL + "/api/BatchStatus" + (access_token ? "?access_token=" + access_token : ""),
+                                    method: "POST",
+                                    body: result,
+                                    json: true,
+                                    timeout: 10000,
+                                    jar: true,
+                                    headers: {
+                                        'Cookie': 'Content-Type=application/json; charset=encoding; Accept=application/json'
                                     }
-                
-                                });
-                                            
-                                if(limiter.counts().RECEIVED < 1000) lr.resume();
-                            });
+                                };
+                                log.debug("POSTing result " + JSON.stringify(result) + " to " + opts.url);
+                                try {
+                                    request(opts, function(error, response, body) {
 
-                            lr.on('error', function(err){   // handle errors while reading file stream
-                                log.fatal('Error while reading file.' + JSON.stringify(err));
-                                console.log(err);
-                                updateBatchRun(err, function() { process.exit(1); });
-                            })
-                            lr.on('end', function(){  // handle end of file
-                                log.debug('Read entire file: ' + filePath)
-                            })
+                                        // Remove some large objects from the response for better-looking logs
+                                        if(BATCH_RESULT_LOG_ITEMS.indexOf("error.details") === -1 && response && response.body && response.body.error && response.body.error.details) response.body.error.details = undefined;
+                                        if(BATCH_RESULT_LOG_ITEMS.indexOf("error.stack") === -1 && response && response.body && response.body.error && response.body.error.stack) response.body.error.stack = undefined;
+                                        if(BATCH_RESULT_LOG_ITEMS.indexOf("response.headers") === -1 && response && response.headers) response.headers = undefined;
+                                        
+                                        var status =  (error || (response && response.statusCode) !== 200) ? "FAILED" : "SUCCESS";
+                                        if(response && response.statusCode !== 200) {
+                                            log.error("Error while posting status: ERROR: " + JSON.stringify(error) + " STATUS: " + JSON.stringify(result) + " RESPONSE: " + JSON.stringify(response));
+                                            if(response && response.statusCode === 401) log.error("Check access_token/credentials. Expired/wrong?");
+                                        } else {
+                                            log.debug("Posted status successfully for " + JSON.stringify(result.payload));
+                                        }
+
+                                    });
+                                } catch(e) {
+                                    failureCount++;
+                                    log.error("Could not post status: ERROR: " + JSON.stringify(e) + " STATUS: " + JSON.stringify(result));
+                                }
+            
+                            });
+                                        
+                            if(limiter.counts().RECEIVED < MAX_QUEUE_SIZE) lr.resume();
+                        });
+
+                        lr.on('error', function(err){   // handle errors while reading file stream
+                            log.fatal('Error while reading file.' + JSON.stringify(err));
+                            console.log(err);
+                            updateBatchRun(err, function() { process.exit(1); });
+                        });
+                        lr.on('end', function(){  // handle end of file
+                            eof = true;
+                            log.debug('Read entire file: ' + filePath);
+                        });
 
                         // limiter.on('depleted', function () {
                         //     s.resume();

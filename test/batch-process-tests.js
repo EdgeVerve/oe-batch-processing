@@ -24,9 +24,9 @@ describe("batch-processing-tests", function () {
         log.debug("calling processFile");
 
 //        var filePath = "test/testdata.1.txt";
-//        var filePath = "D:/1k.txt";
+        var filePath = "D:/1k.txt";
 //        var filePath = "D:/20k.txt";
-        var filePath = "D:/10mil.txt";
+//        var filePath = "D:/10mil.txt";
 //        var filePath = "D:/100mil.txt";
         var options = { 
                 //ctx: {access_token: "P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx"},
