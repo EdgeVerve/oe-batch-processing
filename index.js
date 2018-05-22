@@ -26,8 +26,7 @@ Example config:
     "minTime": 20,            // Minimum time delay between start times of two records being processed, in ms
     "batchResultLogItems": "",  // Comma separated list of items that can be included in the default response that
                                 // is logged to DB. Possible values: error.details, error.stack, response.headers
-    "appBaseURL": "http://localhost:3000",
-    "excludeFileRecordFromStatus": false
+    "appBaseURL": "http://localhost:3000"
 }
 */
 var config, progressInterval, startTime, endTime, pCount = 0;
@@ -48,11 +47,11 @@ var es = require('event-stream');
 var request = require('request');
 // Module that manages the rate-limiting or throttling of the file processing
 const Bottleneck = require("bottleneck");
-var bottleNeckConfig = { maxConcurrent: process.env["MAX_CONCURRENT"] || 
-                        (config && config.maxConcurrent) || 80, 
-                        minTime: process.env["MIN_TIME"] || 
-                        (config && config.minTime) || 20 };
-log.debug("BottleNeck Config: " + JSON.stringify(bottleNeckConfig));
+var bottleNeckConfig = { maxConcurrent: process.env["MAX_CONCURRENT"]? Number(process.env["MAX_CONCURRENT"]) :  
+                        (config && config.maxConcurrent)? config.maxConcurrent : 80, 
+                        minTime: process.env["MIN_TIME"] ? Number(process.env["MIN_TIME"]) :  
+                        (config && config.minTime)? config.minTime : 20 };
+log.info("BottleNeck Config: " + JSON.stringify(bottleNeckConfig));
 
 // the module-object used to queue jobs and execute them with rate-limiting/throttling 
 const limiter = new Bottleneck(bottleNeckConfig);
@@ -80,6 +79,7 @@ var running = false;
  *              * @property {function} onStart - a function taking a single callback function as a parameter. (optional) 
  *              * @property {function} onEnd   - a function taking a single callback function as a parameter. (optional)
  *              * @property {function} onEachRecord - a function taking two parameters - recData (object), cb (callback function). This is mandatory.
+ *              * @property {function} onEachResult - a function taking a single parameter - result (object). This is optional.
  * @param {function} cb - callback function - gets called when all processing is finished                     
  */ 
 function processFile(filePath, options, jobService, cb) {
@@ -119,6 +119,13 @@ function processFile(filePath, options, jobService, cb) {
         jobService.onEnd = function(cb5) {
             log.debug("calling jobService.onEnd");
             cb5();
+        };
+    }
+
+    // We provide our own empty onEachResult(..) if one is not supplied
+    if(!(jobService.onEachResult && typeof jobService.onEachResult === 'function')) {
+        jobService.onEachResult = function(r) {
+            log.debug("calling jobService.onEachResult");
         };
     }
 
@@ -225,6 +232,9 @@ function processFile(filePath, options, jobService, cb) {
 
 //13                                // Here, we're in the callback. We reach this point once a job (i.e., processing a single record) finishes
                                     // 'result' holds the result of execution of the job
+
+                                    if(result === null || result === undefined) return;  // Null result means we did not get a payload, so ignoring and not proceeding
+
                                     if(result.status === "FAILED") log.debug("Error while posting record: " + JSON.stringify(result));
                                     else log.debug("Successfully processed record: " + JSON.stringify(result));
 
@@ -446,11 +456,15 @@ function runJob(jobService, recData, cb3) {
         // Get access token
         var access_token = jobService.options && jobService.options.ctx && jobService.options.ctx.access_token2;
         if(!access_token) log.warn("Neither access_token is provided in env var (ACCESS_TOKEN) / options.ctx / payload.ctx nor user-credentials are provided in options.ctx");
-        if(!payload || err) {
+        if(err) {
             log.error("There was an error processing file record to JSON: " + JSON.stringify(err));
             var retStatus = {fileRecordData: recData, payload: payload, status: "FAILED", error: err };
             totalRecordCount++; failureCount++;
+            try { jobService.onEachResult(retStatus); } catch(e) { log.error("Error after calling jobService.onEachResult(..): " + ((e && e.message) ? e.message : JSON.stringify(e))); }
             return cb3(retStatus);
+        } else if(!payload) {
+            log.debug("No payload passed. This record will be ignored. No action will be taken and nothing will be posted to BatchStatus / BatchRun");
+            return cb3(null);
         }
 
         // Get the oe-cloud API to be called
@@ -508,11 +522,13 @@ function runJob(jobService, recData, cb3) {
                 retStatus.error = error ? (error.message ? error.message : error)  : status === "FAILED" ? response && response.body : undefined;
                 totalRecordCount++;
                 if(response.statusCode === 200) successCount++; else failureCount++;
+                try { jobService.onEachResult(retStatus); } catch(e) { log.error("Error after calling jobService.onEachResult(..): " + ((e && e.message) ? e.message : JSON.stringify(e))); }
                 return cb3(retStatus);
             });
         } catch(e) {
             totalRecordCount++; failureCount++;
             var retStatus = {fileRecordData: recData, payload: payload, requestOpts: opts, response: null, statusText: "FAILED", error: e };
+            try { jobService.onEachResult(retStatus); } catch(e) { log.error("Error after calling jobService.onEachResult(..): " + ((e && e.message) ? e.message : JSON.stringify(e))); }
             return cb3(retStatus);
         }
 
