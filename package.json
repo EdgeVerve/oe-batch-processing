@@ -8,10 +8,10 @@
   },
   "dependencies": {
     "bottleneck": "^2.3.0",
-    "event-stream": "^3.3.4",
     "line-by-line": "^0.1.6",
     "oe-logger": "^1.0.0",
-    "request": "^2.85.0"
+    "request": "^2.85.0",
+    "uuid": "^3.2.1"
   },
   "devDependencies": {
     "mocha": "^5.1.1",
@@ -25,5 +25,5 @@
     "url": "git@10.73.97.24:oecloud.io/batch-processing.git"
   },
   "author": "Ajith Vasudevan",
-  "license": "ISC"
+  "license": "MIT"
 }

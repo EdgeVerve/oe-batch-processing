@@ -64,6 +64,7 @@ Example config:
 var config, progressInterval, startTime, endTime, pCount = 0;
 try {
     config = require('./config.json');
+    if(require.main !== module) log.info("Config: " + JSON.stringify(config));
 } catch(e) { log.warn("No config file found. Using default values for batch processing configuration"); 
 }
 
@@ -73,11 +74,7 @@ try {
 // Used to create id for the BatchRun record that we will be creating
 // for each run of the processFile(..) function
 var uuidv4 = require('uuid/v4');
-
-var fs = require('fs');
-var readline = require('readline');
-var stream = require('stream');
-var es = require('event-stream');
+// Module that reads files line by line with ability to pause and resume file reading
 var LineByLineReader = require('line-by-line');
 var request = require('request');
 // Module that manages the rate-limiting or throttling of the file processing
@@ -86,18 +83,18 @@ var bottleNeckConfig = { maxConcurrent: process.env["MAX_CONCURRENT"]? Number(pr
                         (config && config.maxConcurrent)? config.maxConcurrent : 80, 
                         minTime: process.env["MIN_TIME"] ? Number(process.env["MIN_TIME"]) :  
                         (config && config.minTime)? config.minTime : 20 };
-log.info("BottleNeck Config: " + JSON.stringify(bottleNeckConfig));
+if(require.main !== module) log.info("BottleNeck Config: " + JSON.stringify(bottleNeckConfig));
 
 // the module-object used to queue jobs and execute them with rate-limiting/throttling 
 const limiter = new Bottleneck(bottleNeckConfig);
 
 // list of items to log in addition to default items
 var BATCH_RESULT_LOG_ITEMS = process.env["BATCH_RESULT_LOG_ITEMS"] || (config && config.batchResultLogItems) || "";
-log.info("BATCH_RESULT_LOG_ITEMS = " + BATCH_RESULT_LOG_ITEMS);
+if(require.main !== module) log.info("BATCH_RESULT_LOG_ITEMS = " + BATCH_RESULT_LOG_ITEMS);
 
 // Maximum number of jobs tat can be queued before pausing the file reading
 var MAX_QUEUE_SIZE = process.env["MAX_QUEUE_SIZE"] ? Number(process.env["MAX_QUEUE_SIZE"]) : (config && config.maxQueueSize) || 50000;
-log.info("MAX_QUEUE_SIZE = " + MAX_QUEUE_SIZE);
+if(require.main !== module) log.info("MAX_QUEUE_SIZE = " + MAX_QUEUE_SIZE);
 
 var appBaseURL, access_token, batchRunId, batchRunVersion, totalRecordCount = 0, successCount = 0, failureCount = 0, s;
 var eof = false;  // Flag that changes state when the file is completely read
@@ -395,7 +392,7 @@ function getAccessToken(options, cb) {
                 'tenant-id': options.ctx.tenantId
             }
         };
-        log.debug("POSTing user credentials for obtaining access_token");
+        log.debug("POSTing user credentials for obtaining access_token to " + opts.url);
         try {
             request(opts, function(error, response, body) {
                 if(response && response.statusCode !== 200) {
@@ -585,6 +582,20 @@ function runJob(jobService, recData, cb3) {
         }
 
     });
+}
+
+if (require.main === module) {
+    console.log("\n\n ============================= Batch Processing =============================\n");
+    console.log("This is a standalone NodeJS module that can be used to insert/update records");
+    console.log("from a flat (text) file containing lines, one line per record. ");
+    console.log("Transformation logic needs to be provided by the client in the form of ");
+    console.log("a `onEachRecord(..)` function. This function needs to be a member of a");
+    console.log("`JobService` object.\n");
+    console.log("See README.md or http://evgit/oecloud.io/batch-processing for more info.\n");
+    console.log("Also see the `sample-usage.js` in the `batch-processing` project ");
+    console.log("root for an example usage. Run it with \n");
+    console.log("    $ node sample-usage.js\n");
+    console.log(" ============================================================================\n\n");
 }
 
 //20 // export the processFile(..) function and make it available to clients

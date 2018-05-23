@@ -1,4 +1,4 @@
-var filePath = "test/testdata.txt";
+var filePath = "test/1k.txt";
 var options = { 
         //ctx: {access_token: "P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx"},
         ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},
