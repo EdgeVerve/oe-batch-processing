@@ -177,24 +177,11 @@ batchProcessing.processFile(filePath, options, jobService, function() {   // cal
 
 ## Sample BatchStatus record
 
-```json
+(Audit fields removed for clarity)
+```javascript
 {
         "_id" : ObjectId("5b04e87a09e96cfc3263f744"),
-        "_type" : "BatchStatus",
-        "_createdBy" : "judith",
-        "_modifiedBy" : "judith",
-        "_createdOn" : ISODate("2018-05-23T04:05:14.358Z"),
-        "_modifiedOn" : ISODate("2018-05-23T04:05:14.358Z"),
-        "_scope" : [
-                "tenantId:demotenant"
-        ],
-        "_autoScope" : {
-                "tenantId" : "demotenant"
-        },
-        "_isDeleted" : false,
-        "_version" : "6d21fe9c-fdb6-4a52-9fee-684b5fac635f",
-        "_hostName" : "BLRKEC120808L",
-        "_fsCtx" : "{\"options\":{\"ctx\":{\"remoteUser\":\"judith\",\"tenantId\":\"demotenant\",\"roles\":[\"customer\"],\"username\":\"judith\",\"userTenantId\":\"demotenant\",\"userId\":\"3bca9774-f4d9-11e6-bc64-92361f002003\",\"region\":\"USA\"},\"defaults\":false,\"ctxWeights\":{},\"txnId\":\"7ebf2700-5e3e-11e8-90db-6b26b08ca742\",\"modelName\":\"BatchStatus\",\"accessToken\":\"5rnPFnR5OejYI2OQffxnGpgjr3OVgYQQfe5uDEnxqBEhz2MmkN00b6rGSqnCGgUo\",\"whereKeysAppUser\":[],\"whereKeysCustomerProfile\":[],\"restContext\":true},\"isNewInstance\":true}",
+        
         "fileRecordData" : {
                 "fileName" : "test/1k.txt",
                 "rec" : "100000000000000000000000000000000000000 100000000000000000000000000000000000000",
@@ -248,24 +235,10 @@ batchProcessing.processFile(filePath, options, jobService, function() {   // cal
 
 ## Sample BatchRun record
 
-```json
+(Audit fields removed for clarity)
+```javascript
 {
         "_id" : "1b709e40-8357-4557-80ee-7e0039f722fc",
-        "_type" : "BatchRun",
-        "_createdBy" : "judith",
-        "_modifiedBy" : "judith",
-        "_createdOn" : ISODate("2018-05-23T03:54:22.888Z"),
-        "_modifiedOn" : ISODate("2018-05-23T03:54:49.046Z"),
-        "_scope" : [
-                "tenantId:demotenant"
-        ],
-        "_autoScope" : {
-                "tenantId" : "demotenant"
-        },
-        "_isDeleted" : false,
-        "_version" : "597f5a33-b86d-4055-819e-0ee0f1b2e3c7",
-        "_hostName" : "BLRKEC120808L",
-        "_fsCtx" : "{\"options\":{\"ctx\":{\"remoteUser\":\"judith\",\"tenantId\":\"demotenant\",\"roles\":[\"customer\"],\"username\":\"judith\",\"userTenantId\":\"demotenant\",\"userId\":\"3bca9774-f4d9-11e6-bc64-92361f002003\",\"region\":\"USA\"},\"defaults\":false,\"ctxWeights\":{},\"txnId\":\"0a097c90-5e3d-11e8-90db-6b26b08ca742\",\"modelName\":\"BatchRuns\",\"accessToken\":\"6wz8nE9BqO32VGDqGcvt14fPwjuJJMBDjXW07d5nxmqtBNR5OjGJj1TsuEXVdogC\",\"whereKeysAppUser\":[],\"whereKeysCustomerProfile\":[],\"restContext\":true,\"whereKeysBatchRun\":[]},\"isNewInstance\":false,\"where\":{\"id\":\"1b709e40-8357-4557-80ee-7e0039f722fc\"}}",
         "startTimeMillis" : 1527047662856,
         "startTime" : "2018-05-23T03:54:22.856Z",
         "filePath" : "test/1k.txt",
@@ -289,8 +262,7 @@ batchProcessing.processFile(filePath, options, jobService, function() {   // cal
         "durationMillis" : 25918,
         "totalRecordCount" : 1000,
         "successCount" : 1000,
-        "failureCount" : 0,
-        "_oldVersion" : "4587876b-a162-4141-9ce9-8cd02ba4223a"
+        "failureCount" : 0
 }
 ```
 
