@@ -246,6 +246,9 @@ function processFile(filePath, options, jobService, cb) {
                         if(error && error.code === "ECONNREFUSED") {
                             console.log("\nIs the oe-Cloud Application running? Check that it is running at the URL specified ( '"+ appBaseURL +"' )\n");
                         }
+                        if(response && response.statusCode === 404) { 
+                            console.log("\nCheck if oe-Cloud app has the necessary models required for batch-processing: `BatchStatus` and `BatchRun`. Aborting processing.\n");
+                        }
                         process.exit(1);
                     } else {
                         batchRunVersion = body && body._version;
