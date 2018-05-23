@@ -442,7 +442,7 @@ function getAccessToken(options, cb) {
  */
 function updateBatchRun(error, cb6) {
     endTime = new Date();
-    var batchRunStats = {_version: batchRunVersion, endTimeMillis: endTime.getTime(), endTime: endTime, totalRecordCount: totalRecordCount, successCount: successCount, failureCount: failureCount, error: error};
+    var batchRunStats = {_version: batchRunVersion, endTimeMillis: endTime.getTime(), endTime: endTime, durationMillis: (endTime.getTime() - startTime.getTime()), totalRecordCount: totalRecordCount, successCount: successCount, failureCount: failureCount, error: error};
     var opts = {
         url: appBaseURL + "/api/BatchRuns/" + batchRunId + (access_token ? "?access_token=" + access_token : ""),
         method: "PUT",
