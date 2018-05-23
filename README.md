@@ -262,8 +262,8 @@ batchProcessing.processFile(filePath, options, jobService, function() {   // cal
         "endTime" : "2018-05-23T03:54:48.774Z",
         "durationMillis" : 25918,
         "totalRecordCount" : 1000,
-        "successCount" : 1000,
-        "failureCount" : 0
+        "successCount" : 550,
+        "failureCount" : 450
 }
 ```
 
