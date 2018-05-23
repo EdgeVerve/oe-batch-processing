@@ -30,18 +30,19 @@
  * @author Ajith Vasudevan
  */
 
+var log, uuidv4, LineByLineReader, Bottleneck, request;
+try {  
 //0 // Libraries required by this module
- var log = require('oe-logger')('batch-processing');
+ log = require('oe-logger')('batch-processing');
 // Used to create id for the BatchRun record that we will be creating
 // for each run of the processFile(..) function
-var uuidv4 = require('uuid/v4');
+uuidv4 = require('uuid/v4');
 // Module that reads files line by line with ability to pause and resume file reading
-var LineByLineReader = require('line-by-line');
-var request = require('request');
+LineByLineReader = require('line-by-line');
+request = require('request');
 // Module that manages the rate-limiting or throttling of the file processing
-const Bottleneck = require("bottleneck");
-
-if(!log) {console.log('log is not defined. Ensure that `oe-logger` module is installed properly.'); process.exit(1);}
+Bottleneck = require("bottleneck");
+} catch(e) {console.log('\n\n'); console.log(e && e.message ? e.message : e); console.log('\nHave you run `npm install`?\n\n'); process.exit(1);}
 
 var batchRunInserted = false; 
 
@@ -237,9 +238,14 @@ function processFile(filePath, options, jobService, cb) {
             try {
                 request(opts, function(error, response, body) {
                     var status =  (error || (response && response.statusCode) !== 200) ? "FAILED" : "SUCCESS";
-                    if(response && response.statusCode !== 200) {
-                        log.error("Error while posting batchRun: ERROR: " + JSON.stringify(error) + " STATUS: " + response.statusCode + " RESPONSE: " + JSON.stringify(response));
-                        if(response && response.statusCode === 401) log.error("Check access_token/credentials. Expired/wrong?. Aborting processing.");
+                    if(error || (response && response.statusCode) !== 200) {
+                        log.error("Error while posting batchRun: ERROR: " + JSON.stringify(error) + " STATUS: " + (response && response.statusCode) + " RESPONSE: " + JSON.stringify(response));
+                        if(response && response.statusCode === 401) { 
+                            console.log("\nCheck access_token/credentials. Expired/wrong?. Aborting processing.\n");
+                        }
+                        if(error && error.code === "ECONNREFUSED") {
+                            console.log("\nIs the oe-Cloud Application running? Check that it is running at the URL specified ( '"+ appBaseURL +"' )\n");
+                        }
                         process.exit(1);
                     } else {
                         batchRunVersion = body && body._version;
@@ -386,7 +392,7 @@ function getAccessToken(options, cb) {
             process.exit(1);
         }
         var opts = {
-            url: options.appBaseURL + "/auth/local",
+            url: appBaseURL + "/auth/local",
             method: "POST",
             body: {username: options.ctx.username, password: options.ctx.password},
             json: true,
@@ -410,6 +416,9 @@ function getAccessToken(options, cb) {
                         return cb();
                     } else {
                         log.fatal("Could not get access_token by login: ERROR: " + JSON.stringify(error) + " RESPONSE: " + JSON.stringify(response));
+                        if(error && error.code === "ECONNREFUSED") {
+                            console.log("\nIs the oe-Cloud Application running? Check that it is running at the URL specified ( '"+ appBaseURL +"' )\n");
+                        }
                         process.exit(1);
                     }
                 }
