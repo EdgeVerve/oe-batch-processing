@@ -239,6 +239,7 @@ batchProcessing.processFile(filePath, options, jobService, function() {   // cal
 ```javascript
 {
         "_id" : "1b709e40-8357-4557-80ee-7e0039f722fc",
+        
         "startTimeMillis" : 1527047662856,
         "startTime" : "2018-05-23T03:54:22.856Z",
         "filePath" : "test/1k.txt",
