@@ -520,9 +520,9 @@ function runJob(jobService, recData, cb3) {
         }
 
         // Get the oe-cloud API to be called
-        var api = (payload.modelAPI ? payload.modelAPI : (jobService.options && jobService.options.modelAPI));
+        var api = process.env['MODEL_API'] ? process.env['MODEL_API'] : (payload.modelAPI ? payload.modelAPI : (jobService.options && jobService.options.modelAPI));
         if(!api) {
-            var msg = "modelAPI is neither specified in processFile options nor passed in payload. Aborting job."
+            var msg = "modelAPI is neither specified in environment variable (MODEL_API) nor processFile options nor passed in payload. Aborting job."
             log.fatal(msg);
             updateBatchRun(msg, function() { process.exit(1); });
         }
