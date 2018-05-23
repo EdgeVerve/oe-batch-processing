@@ -27,7 +27,7 @@ var jobService = {
         cb(payload, payload ? null : "Couldn't get payload for recId " + (recData && recData.recId));
     },
     onEachResult: function onEachResult (result) {
-        log.debug("Inside jobService.onEachResult: " + JSON.stringify(result));
+        console.log("Inside jobService.onEachResult: " + JSON.stringify(result));
     }
 };
 

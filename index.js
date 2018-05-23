@@ -30,6 +30,21 @@
  * @author Ajith Vasudevan
  */
 
+//0 // Libraries required by this module
+ var log = require('oe-logger')('batch-processing');
+// Used to create id for the BatchRun record that we will be creating
+// for each run of the processFile(..) function
+var uuidv4 = require('uuid/v4');
+// Module that reads files line by line with ability to pause and resume file reading
+var LineByLineReader = require('line-by-line');
+var request = require('request');
+// Module that manages the rate-limiting or throttling of the file processing
+const Bottleneck = require("bottleneck");
+
+if(!log) {console.log('log is not defined. Ensure that `oe-logger` module is installed properly.'); process.exit(1);}
+
+var batchRunInserted = false; 
+
 //1 // Catch uncaught exceptions of nodejs, especially
 // fileNotFound, which cannot be trapped by try..catch
 process.on('uncaughtException', function (err) {
@@ -48,7 +63,6 @@ process.on('uncaughtException', function (err) {
 if(!process.env["LOGGER_CONFIG"] && process.env["BATCH_LOGGER_CONFIG"]) {
     process.env["LOGGER_CONFIG"] = JSON.stringify({"levels":{"default":process.env["BATCH_LOGGER_CONFIG"].trim().toLocaleLowerCase()}});
 }
-var log = require('oe-logger')('batch-processing');
 
 //3 // Read the batch processing config file
 /*
@@ -69,16 +83,6 @@ try {
 }
 
 
-//4 // Libraries required by this module
-
-// Used to create id for the BatchRun record that we will be creating
-// for each run of the processFile(..) function
-var uuidv4 = require('uuid/v4');
-// Module that reads files line by line with ability to pause and resume file reading
-var LineByLineReader = require('line-by-line');
-var request = require('request');
-// Module that manages the rate-limiting or throttling of the file processing
-const Bottleneck = require("bottleneck");
 var bottleNeckConfig = { maxConcurrent: process.env["MAX_CONCURRENT"]? Number(process.env["MAX_CONCURRENT"]) :  
                         (config && config.maxConcurrent)? config.maxConcurrent : 80, 
                         minTime: process.env["MIN_TIME"] ? Number(process.env["MIN_TIME"]) :  
@@ -244,7 +248,7 @@ function processFile(filePath, options, jobService, cb) {
                             process.exit(1);
                         }
                         log.debug("Posted batchRun successfully with Id: " + batchRunId);
-
+                        batchRunInserted = true;
                         jobService.options = options;
                         var lineNr = 0;
                         var PROGRESS_INTERVAL = (process.env['PROGRESS_INTERVAL'] ? Number(process.env['PROGRESS_INTERVAL']) : (config.progressInterval || 10000));
@@ -438,6 +442,7 @@ function getAccessToken(options, cb) {
  * @param {function} cb6 - a callback function that is called upon completion of the BatchRun update.
  */
 function updateBatchRun(error, cb6) {
+    if(!batchRunInserted) return cb6();
     endTime = new Date();
     var batchRunStats = {_version: batchRunVersion, endTimeMillis: endTime.getTime(), endTime: endTime, durationMillis: (endTime.getTime() - startTime.getTime()), totalRecordCount: totalRecordCount, successCount: successCount, failureCount: failureCount, error: error};
     var opts = {
@@ -509,7 +514,7 @@ function runJob(jobService, recData, cb3) {
             log.error("There was an error processing file record to JSON: " + JSON.stringify(err));
             var retStatus = {fileRecordData: recData, payload: payload, status: "FAILED", error: err };
             totalRecordCount++; failureCount++;
-            try { jobService.onEachResult(retStatus); } catch(e) { log.error("Error after calling jobService.onEachResult(..): " + ((e && e.message) ? e.message : JSON.stringify(e))); }
+            try { jobService.onEachResult(retStatus); } catch(e) { console.log(1); log.error("1Error after calling jobService.onEachResult(..): " + ((e && e.message) ? e.message : JSON.stringify(e))); }
             return cb3(retStatus);
         } else if(!payload) {
             log.debug("No payload passed. This record will be ignored. No action will be taken and nothing will be posted to BatchStatus / BatchRun");
@@ -571,13 +576,13 @@ function runJob(jobService, recData, cb3) {
                 retStatus.error = error ? (error.message ? error.message : error)  : status === "FAILED" ? response && response.body : undefined;
                 totalRecordCount++;
                 if(response && response.statusCode === 200) successCount++; else failureCount++;
-                try { jobService.onEachResult(retStatus); } catch(e) { log.error("Error after calling jobService.onEachResult(..): " + ((e && e.message) ? e.message : JSON.stringify(e))); }
+                try { jobService.onEachResult(retStatus); } catch(e) { console.log(2); log.error("2Error after calling jobService.onEachResult(..): " + ((e && e.message) ? e.message : JSON.stringify(e))); }
                 return cb3(retStatus);
             });
         } catch(e) {
             totalRecordCount++; failureCount++;
             var retStatus = {fileRecordData: recData, payload: payload, requestOpts: opts, response: null, statusText: "FAILED", error: e };
-            try { jobService.onEachResult(retStatus); } catch(e) { log.error("Error after calling jobService.onEachResult(..): " + ((e && e.message) ? e.message : JSON.stringify(e))); }
+            try { jobService.onEachResult(retStatus); } catch(e) { console.log(3); log.error("3Error after calling jobService.onEachResult(..): " + ((e && e.message) ? e.message : JSON.stringify(e))); }
             return cb3(retStatus);
         }
 
