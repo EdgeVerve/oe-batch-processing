@@ -20,10 +20,10 @@ describe("batch-processing-tests", function () {
         done();
     });
 
-    it('should call processFile', function (done) {
-        log.debug("calling processFile");
+    it('should call processFile with custom (user-defined) parser', function (done) {
+        log.debug("Starting processFile test with user-defined Parser");
 
-        var filePath = 'test/1k.txt';
+        var filePath = 'test/batch-100.txt';
 //        var filePath = "D:/20k.txt";
 //        var filePath = "D:/10mil.txt";
 //        var filePath = "D:/100mil.txt";
@@ -64,6 +64,51 @@ describe("batch-processing-tests", function () {
 
         a = require("..");
         a.processFile(filePath, options, jobService, done);
+    });
+
+    it('should call processFile with built-in CSV Parser', function (done) {
+        log.debug("Starting processFile test with built-in CSV Parser");
+        var filePath = "test/batch-100.csv";
+        var options = { 
+                //ctx: {access_token: "P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx"},
+                ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},
+                appBaseURL: 'http://localhost:3000',
+                modelAPI: '/api/Literals',
+                method: 'POST',
+                headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}          
+            };
+
+        var parsers = require('../parsers');
+
+        var parserOpts = {
+        //    delimiter: ' ',                        // Optional. Default is ',' (comma)
+            csvHeaders: ' key, value ',              // Mandatory. No. of csvHeaders (#csvHeaders) must be >= #data-fields. If #csvHeaders !== #data-fields, defaults to error. Whitespace is okay.
+        //    csvHeaderDataTypes: ' string ',        // Optional. Default is 'string,string,string,...' (all fields are considered as type string). #csvHeaderDataTypes must be >= #data-fields. If #csvHeaderDataTypes !== #data-fields, defaults to error. Whitespace is okay.
+            ignoreExtraHeaders: true,                // Optional. Default is false. If true, prevents error when #csvHeaders > #data-fields 
+            ignoreExtraHeaderDataTypes: true         // Optional. Default is false. If true, prevents error when #csvHeaderDataTypes > #data-fields 
+        }    
+        
+        var csvParser = parsers.csvParser(parserOpts);
+        
+        var jobService = {
+        
+            onStart: function onStart (cb) {         // Optional
+                        cb({});
+                    },
+            onEnd: function onEnd (cb) {             // Optional
+                        cb();
+            },
+            onEachRecord: csvParser.onEachRecord,    // using built-in CSV parser
+            
+            onEachResult: function onEachResult (result) {   // Optional
+                log.debug("Inside jobService.onEachResult: " + JSON.stringify(result));
+            }
+        };
+        
+        a = require("..");                           // requiring the batch-processing module
+
+        a.processFile(filePath, options, jobService, done);   // Calling the processFile(..) function to start processing the file
+
     });
 
     after('tests', function (done) {

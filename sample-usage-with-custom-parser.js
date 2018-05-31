@@ -8,6 +8,8 @@
  * This sample usage file uses the batch-processing module and runs standalone with 
  * `node sample-usage.js`  command.
  * 
+ * A custom (user-defined) function is used to parse the data-file.
+ * 
  * Make sure the oe-Cloud app is running at `options.appBaseURL` before running this script.
  * 
  * When run, it takes the data in `filePath` variable and inserts it into the model
@@ -21,9 +23,10 @@
  */
 
 
-var filePath = "test/1k.txt";
-var options = { 
-        //ctx: {access_token: "P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx"},
+var filePath = "test/batch-100.txt";         // The file to be processed
+var options = {                              // Create a batch-processing options object
+
+        //ctx: {access_token: "P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx"},  
         ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},
         appBaseURL: 'http://localhost:3000',
         modelAPI: '/api/Literals',
@@ -31,33 +34,34 @@ var options = {
         headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}          
     };
 
-var jobService = {
+var jobService = {                        // Create a jobService object
 
-    onStart: function onStart (cb) { 
+    onStart: function onStart (cb) {      // Optional
                 cb({});
             },
-    onEnd: function onEnd (cb) {
+
+    onEnd: function onEnd (cb) {         // Optional                     
                 cb();
     },
-    onEachRecord: function onEachRecord (recData, cb) {
+
+    onEachRecord: function onEachRecord (recData, cb) {                                      // Using custom parser
         var json = {"key": recData.rec.split(' ')[0], "value": recData.rec.split(' ')[1]};
         var payload = {
             json: json,
-            //modelAPI: "/api/Literals",
-            //method: "POST",
-            //headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'} 
+            //modelAPI: "/api/Literals",       // Optional
+            //method: "POST",                  // Optional
+            //headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}   // Optional
         };
         cb(payload, payload ? null : "Couldn't get payload for recId " + (recData && recData.recId));
     },
-    onEachResult: function onEachResult (result) {
+
+    onEachResult: function onEachResult (result) {                                     // Optional
         console.log("Inside jobService.onEachResult: " + JSON.stringify(result));
     }
 };
 
-var batchProcessing = require(".");
+var batchProcessing = require(".");                                                    // Requiring the batch-processing module
 
-
-
-batchProcessing.processFile(filePath, options, jobService, function() {
+batchProcessing.processFile(filePath, options, jobService, function() {                // Calling the processFile(..) function to start processing the file
     console.log("file "+ filePath +" processed successfully");
 });

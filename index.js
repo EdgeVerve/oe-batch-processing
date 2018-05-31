@@ -31,26 +31,31 @@
  */
 
 var log, uuidv4, LineByLineReader, Bottleneck, request;
+if(!process.env["LOGGER_CONFIG"] && process.env["BATCH_LOGGER_CONFIG"]) {
+    process.env["LOGGER_CONFIG"] = JSON.stringify({"levels":{"default":process.env["BATCH_LOGGER_CONFIG"].trim().toLocaleLowerCase()}});
+}
 try {  
 //0 // Libraries required by this module
- log = require('oe-logger')('batch-processing');
-// Used to create id for the BatchRun record that we will be creating
-// for each run of the processFile(..) function
-uuidv4 = require('uuid/v4');
-// Module that reads files line by line with ability to pause and resume file reading
-LineByLineReader = require('line-by-line');
-request = require('request');
-// Module that manages the rate-limiting or throttling of the file processing
-Bottleneck = require("bottleneck");
+    log = require('oe-logger')('batch-processing');
+    // Used to create id for the BatchRun record that we will be creating
+    // for each run of the processFile(..) function
+    uuidv4 = require('uuid/v4');
+    // Module that reads files line by line with ability to pause and resume file reading
+    LineByLineReader = require('line-by-line');
+    request = require('request');
+    // Module that manages the rate-limiting or throttling of the file processing
+    Bottleneck = require("bottleneck");
 } catch(e) {console.log('\n\n'); console.log(e && e.message ? e.message : e); console.log('\nHave you run `npm install`?\n\n'); process.exit(1);}
 
 var batchRunInserted = false; 
+var onEndCalled = false;
 
 //1 // Catch uncaught exceptions of nodejs, especially
 // fileNotFound, which cannot be trapped by try..catch
 process.on('uncaughtException', function (err) {
     updateBatchRun(err, function() {    // Update BatchRun with current status and exception
         log.error("There was an uncaught exception:");
+        if(err.message) log.error(err.message);
         log.error(JSON.stringify(err));
         console.log(err);
         process.exit(1);
@@ -91,7 +96,7 @@ var bottleNeckConfig = { maxConcurrent: process.env["MAX_CONCURRENT"]? Number(pr
 if(require.main !== module) log.info("BottleNeck Config: " + JSON.stringify(bottleNeckConfig));
 
 // the module-object used to queue jobs and execute them with rate-limiting/throttling 
-const limiter = new Bottleneck(bottleNeckConfig);
+var limiter;
 
 // list of items to log in addition to default items
 var BATCH_RESULT_LOG_ITEMS = process.env["BATCH_RESULT_LOG_ITEMS"] || (config && config.batchResultLogItems) || "";
@@ -134,6 +139,14 @@ function processFile(filePath, options, jobService, cb) {
     log.debug("filePath = " + filePath);
     log.debug("options = " + JSON.stringify(options));
     log.debug("jobservice : " + jobService);
+    batchRunInserted = false;
+    onEndCalled = false;
+    totalRecordCount = 0, successCount = 0, failureCount = 0;
+    access_token = null;
+    appBaseURL = null, access_token = null, batchRunId = null, batchRunVersion = null;
+    eof = false;
+    limiter = new Bottleneck(bottleNeckConfig);
+    pCount = 0;
 
 //6 // Some sanity checks
     if(!filePath || filePath.trim().length === 0) {
@@ -181,26 +194,27 @@ function processFile(filePath, options, jobService, cb) {
         updateBatchRun(error, function() { process.exit(1); });
     });
 
-
+    onEndCalled = false;
 //7 // Subscribing to IDLE state of limiter
     limiter.on('idle', function () {
-        log.debug("LIMITER is IDLE. calling jobService.onEnd()");
-        if(!eof) { lr.resume(); return; }  // Start queuing records for processing once the current que is processed and the limiter is idle
+        if(!onEndCalled) {
+            onEndCalled = true;
+            log.debug("LIMITER is IDLE. calling jobService.onEnd()");
+            if(!eof) { lr.resume(); return; }  // Start queuing records for processing once the current queue is processed and the limiter is idle
+            // When eof and limiter is IDLE, Calling onEnd(..) after all records are processed, i.e., 
+            jobService.onEnd(function() {
+                log.debug("jobService.onEnd finished, calling processFile cb");
+                // After onEnd(..) returns (at the end of the run), Updating the previously inserted BatchRun record with stats 
+                updateBatchRun(undefined, function() {
+                    cb(); 
+                });
+                console.log("************* PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (endTime - startTime)/1000 + " sec. Limiter Stats: " + JSON.stringify(limiter.counts()) + " *************");
+                clearInterval(progressInterval);
 
-        // When eof and limiter is IDLE, Calling onEnd(..) after all records are processed, i.e., 
-        jobService.onEnd(function() {
-            log.debug("jobService.onEnd finished, calling processFile cb");
-
-            // After onEnd(..) returns (at the end of the run), Updating the previously inserted BatchRun record with stats 
-            updateBatchRun(undefined, function() { 
-                cb(); 
+                var end = new Date().getTime();
+                console.log("\nBatch took " + ((end - start)/1000) + " sec\n");
             });
-            console.log("************* PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (endTime - startTime)/1000 + " sec. Limiter Stats: " + JSON.stringify(limiter.counts()) + " *************");
-            clearInterval(progressInterval);
-
-            var end = new Date().getTime();
-            console.log("\nBatch took " + ((end - start)/1000) + " sec\n");
-        });
+        } else cb();
     });
     
 //8 // This is where it all begins: Calling onStart(..)
@@ -522,13 +536,15 @@ function runJob(jobService, recData, cb3) {
         // Get access token
         var access_token = jobService.options && jobService.options.ctx && jobService.options.ctx.access_token2;
         if(!access_token) log.warn("Neither access_token is provided in env var (ACCESS_TOKEN) / options.ctx / payload.ctx nor user-credentials are provided in options.ctx");
-        if(err) {
+        
+        // Check for error from onEachRecord
+        if(err) {  // Do not proceed with POSTing in there was an error
             log.error("There was an error processing file record to JSON: " + JSON.stringify(err));
             var retStatus = {fileRecordData: recData, payload: payload, status: "FAILED", error: err };
             totalRecordCount++; failureCount++;
-            try { jobService.onEachResult(retStatus); } catch(e) { console.log(1); log.error("1Error after calling jobService.onEachResult(..): " + ((e && e.message) ? e.message : JSON.stringify(e))); }
+            try { jobService.onEachResult(retStatus); } catch(e) { console.log(1); log.error("Error after calling jobService.onEachResult(..): " + ((e && e.message) ? e.message : JSON.stringify(e))); }
             return cb3(retStatus);
-        } else if(!payload) {
+        } else if(!payload) {  // If there was no error, but also there's no payload, we'll ignore this record
             log.debug("No payload passed. This record will be ignored. No action will be taken and nothing will be posted to BatchStatus / BatchRun");
             return cb3(null);
         }
