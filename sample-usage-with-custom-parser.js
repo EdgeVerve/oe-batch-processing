@@ -56,7 +56,7 @@ var jobService = {                        // Create a jobService object
     },
 
     onEachResult: function onEachResult (result) {                                     // Optional
-        console.log("Inside jobService.onEachResult: " + JSON.stringify(result));
+       // console.log("Inside jobService.onEachResult: " + JSON.stringify(result));
     }
 };
 

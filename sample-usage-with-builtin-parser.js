@@ -56,7 +56,7 @@ var jobService = {                                         // Create a jobServic
     onEachRecord: csvParser.onEachRecord,                  // Using built-in CSV parser
     
     onEachResult: function onEachResult (result) {         // Optional
-        console.log("Inside jobService.onEachResult: " + JSON.stringify(result));
+        //console.log("Inside jobService.onEachResult: " + JSON.stringify(result));
     }
 };
 
