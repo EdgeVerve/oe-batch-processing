@@ -35,7 +35,7 @@ if(!process.env["LOGGER_CONFIG"] && process.env["BATCH_LOGGER_CONFIG"]) {
     process.env["LOGGER_CONFIG"] = JSON.stringify({"levels":{"default":process.env["BATCH_LOGGER_CONFIG"].trim().toLocaleLowerCase()}});
 }
 try {  
-//0 // Libraries required by this module
+//1 // Libraries required by this module
     log = require('oe-logger')('batch-processing');
     // Used to create id for the BatchRun record that we will be creating
     // for each run of the processFile(..) function
@@ -49,18 +49,7 @@ try {
 
 var batchRunInserted = false; 
 var onEndCalled = false;
-
-//1 // Catch uncaught exceptions of nodejs, especially
-// fileNotFound, which cannot be trapped by try..catch
-process.on('uncaughtException', function (err) {
-    updateBatchRun(err, function() {    // Update BatchRun with current status and exception
-        log.error("There was an uncaught exception:");
-        if(err.message) log.error(err.message);
-        log.error(JSON.stringify(err));
-        console.log(err);
-        process.exit(1);
-    });
-});
+var errMsg;
 
 
 //2 // Set log level programmatically using our own env var BATCH_LOGGER_CONFIG
@@ -150,16 +139,19 @@ function processFile(filePath, options, jobService, cb) {
 
 //6 // Some sanity checks
     if(!filePath || filePath.trim().length === 0) {
-        log.fatal("filePath is not specified. Aborting processing.");
-        process.exit(1);
+        errMsg = "filePath is not specified. Aborting processing.";
+        log.fatal(errMsg);
+        return cb(new Error(errMsg));
     }
     if(!jobService) {
-        log.fatal("jobService is not specified. Aborting processing.");
-        process.exit(1);
+        errMsg = "jobService is not specified. Aborting processing."
+        log.fatal(errMsg);
+        return cb(new Error(errMsg));
     }
     if(!(jobService.onEachRecord && typeof jobService.onEachRecord === 'function')) {
-        log.fatal("jobService.onEachRecord() is not defined. Aborting processing.");
-        process.exit(1);
+        errMsg = "jobService.onEachRecord() is not defined. Aborting processing.";
+        log.fatal(errMsg);
+        return cb(new Error(errMsg));
     }
 
     // We provide our own empty onStart(..) if one is not supplied
@@ -184,14 +176,20 @@ function processFile(filePath, options, jobService, cb) {
             log.debug("calling jobService.onEachResult");
         };
     }
-
+    var limiterError = false;
     // Subscribing to ERROR state of limiter
     limiter.on('error', function (error) {
-        log.fatal("An error occurred: ");
-        log.fatal(error.message);
+        if(!limiterError) {
+            limiterError = true;
+            errMsg = error && (error.message ? error.message : JSON.stringify(error));
+            console.log(error);
+            log.fatal(errMsg);
 
-        // Upon a limiter error, Updating the previously inserted BatchRun record with stats and exiting thereafter
-        updateBatchRun(error, function() { process.exit(1); });
+            // Upon a limiter error, Updating the previously inserted BatchRun record with stats and exiting thereafter
+            // updateBatchRun(errMsg, function() { 
+            // });
+            return cb(error);
+        }
     });
 
     onEndCalled = false;
@@ -226,8 +224,9 @@ function processFile(filePath, options, jobService, cb) {
             access_token = options && options.ctx && options.ctx.access_token2;          // store into global variable
             appBaseURL = process.env["APP_BASE_URL"] || (options && options.appBaseURL); // store into global variable
             if(!appBaseURL) {
-                log.fatal("appBaseURL is neither specified in env var (APP_BASE_URL) nor in processFile options. Aborting job.");
-                process.exit(1);
+                errMsg = "appBaseURL is neither specified in env var (APP_BASE_URL) nor in processFile options. Aborting job.";
+                log.fatal(errMsg);
+                throw new Error(errMsg);
             }
 
 //10        // Insert a new batchRun record that captures the parameters passed to processFile(..) 
@@ -254,21 +253,26 @@ function processFile(filePath, options, jobService, cb) {
                     var status =  (error || (response && response.statusCode) !== 200) ? "FAILED" : "SUCCESS";
                     if(error || (response && response.statusCode) !== 200) {
                         log.error("Error while posting batchRun: ERROR: " + JSON.stringify(error) + " STATUS: " + (response && response.statusCode) + " RESPONSE: " + JSON.stringify(response));
-                        if(response && response.statusCode === 401) { 
-                            console.log("\nCheck access_token/credentials. Expired/wrong?. Aborting processing.\n");
+                        
+                        if(response && response.statusCode === 401) {
+                            errMsg = "Check access_token/credentials. Expired/Wrong/Missing?. Aborting processing."; 
+                            console.log("\n"+ errMsg +"\n");
                         }
                         if(error && error.code === "ECONNREFUSED") {
-                            console.log("\nIs the oe-Cloud Application running? Check that it is running at the URL specified ( '"+ appBaseURL +"' )\n");
+                            errMsg = "Is the oe-Cloud Application running? Check that it is running at the URL specified ( '"+ appBaseURL +"' )";
+                            console.log("\n"+ errMsg +"\n");
                         }
                         if(response && response.statusCode === 404) { 
-                            console.log("\nCheck if oe-Cloud app has the necessary models required for batch-processing: `BatchStatus` and `BatchRun`. Aborting processing.\n");
+                            errMsg = "Check if oe-Cloud app has the necessary models required for batch-processing: `BatchStatus` and `BatchRun`. Aborting processing.";
+                            console.log("\n"+ errMsg +"\n");
                         }
-                        process.exit(1);
+                        cb(new Error(errMsg));
                     } else {
                         batchRunVersion = body && body._version;
                         if(!batchRunVersion) {
-                            log.error("could not get batchRun version");
-                            process.exit(1);
+                            errMsg = "could not get batchRun version";
+                            log.error(errMsg);
+                            throw new Error(errMsg);
                         }
                         log.debug("Posted batchRun successfully with Id: " + batchRunId);
                         batchRunInserted = true;
@@ -299,15 +303,21 @@ function processFile(filePath, options, jobService, cb) {
                             //  *  recData,         - parameter to runJob
                             //  *  function(result) - parameter to runJob
                             // Limiter executes runJob with the above 3 parameters.
-                            limiter.submit({expiration: 20000, id: lineNr}, runJob, jobService, recData, function(result) {
+                            limiter.submit({expiration: 25000, id: lineNr}, runJob, jobService, recData, function(result) {
 
 //13                            // Here, we're in the job's callback. We reach this point once a job (i.e., processing a single record) finishes
                                 // 'result' holds the result of execution of the job
 
                                 if(result === null || result === undefined) return;  // Null result means we did not get a payload, so ignoring and not proceeding
 
-                                if(result.status === "FAILED") log.debug("Error while posting record: " + JSON.stringify(result));
-                                else log.debug("Successfully processed record: " + JSON.stringify(result));
+                                if(result.statusText === "FAILED") log.debug("Error while posting record: " + JSON.stringify(result));
+                                else if(result.statusText === "SUCCESS") log.debug("Successfully processed record: " + JSON.stringify(result));
+                                else {
+                                    lr.pause();
+                                    limiter.updateSettings({reservoir: 0});
+                                    console.log(result);
+                                    throw new Error(result.error);
+                                }
 
 
 //14                                // Now we're going to save the result of execution of the job to the BatchStatus model of the oe-cloud app
@@ -351,9 +361,12 @@ function processFile(filePath, options, jobService, cb) {
                         });
 
                         lr.on('error', function(err){   // handle errors while reading file stream
-                            log.fatal('Error while reading file.' + JSON.stringify(err));
-                            console.log(err);
-                            updateBatchRun(err, function() { process.exit(1); });
+                            errMsg = 'Error while reading file.' + JSON.stringify(err);
+                            log.fatal(errMsg);
+                            console.log(errMsg);
+                            updateBatchRun(errMsg, function() { 
+                            });
+                            cb(err);
                         });
                         lr.on('end', function(){  // handle end of file
                             eof = true;
@@ -405,8 +418,9 @@ function getAccessToken(options, cb) {
         if(!options.ctx.tenantId) log.warn("tenantId is not specified in options.ctx");
         var appBaseURL = process.env["APP_BASE_URL"] || (options && options.appBaseURL);
         if(!appBaseURL) {
-            log.fatal("appBaseURL is not specified in env variable (APP_BASE_URL) or options. Can't defer this to payload when username is specified. Aborting job.");
-            process.exit(1);
+            errMsg = "appBaseURL is not specified in env variable (APP_BASE_URL) or options. Can't defer this to payload when username is specified. Aborting job.";
+            log.fatal(errMsg);
+            throw new Error(errMsg);
         }
         var opts = {
             url: appBaseURL + "/auth/local",
@@ -423,8 +437,9 @@ function getAccessToken(options, cb) {
         try {
             request(opts, function(error, response, body) {
                 if(response && response.statusCode !== 200) {
-                    log.fatal("Error received after posting user credentials: ERROR: " + JSON.stringify(error) + " RESPONSE: " + JSON.stringify(response));
-                    process.exit(1);
+                    errMsg = "Error received after posting user credentials: ERROR: " + JSON.stringify(error) + " RESPONSE: " + JSON.stringify(response);
+                    log.fatal(errMsg);
+                    cb(new Error(errMsg));
                 } else {
                     var access_token = body && body.access_token;
                     if(access_token) {
@@ -432,18 +447,21 @@ function getAccessToken(options, cb) {
                         options.ctx.access_token2 = access_token;
                         return cb();
                     } else {
-                        log.fatal("Could not get access_token by login: ERROR: " + JSON.stringify(error) + " RESPONSE: " + JSON.stringify(response));
+                        errMsg = "Could not get access_token by login: ERROR: " + JSON.stringify(error) + " RESPONSE: " + JSON.stringify(response);
+                        log.fatal(errMsg);
                         if(error && error.code === "ECONNREFUSED") {
-                            console.log("\nIs the oe-Cloud Application running? Check that it is running at the URL specified ( '"+ appBaseURL +"' )\n");
+                            errMsg = "Is the oe-Cloud Application running? Check that it is running at the URL specified ( '"+ appBaseURL +"' )";
+                            console.log("\n" + errMsg + "\n");
                         }
-                        process.exit(1);
+                        throw new Error(errMsg);
                     }
                 }
                 
             });
         } catch(e) {
-            log.warn("Could not post user credentials: ERROR: " + JSON.stringify(e));
-            process.exit(1);
+            errMsg = "Could not post user credentials: ERROR: " + JSON.stringify(e);
+            log.fatal(errMsg);
+            throw new Error(errMsg);
         }
     } 
     // finally, try to get access token directly from options
@@ -487,9 +505,13 @@ function updateBatchRun(error, cb6) {
         request(opts, function(error, response, body) {
             var status =  (error || (response && response.statusCode) !== 200) ? "FAILED" : "SUCCESS";
             if(response && response.statusCode !== 200) {
-                log.error("Error while PUTing batchRun Stats: ERROR: " + JSON.stringify(error) + " STATUS: " + response.statusCode + " RESPONSE: " + JSON.stringify(response) + " STATS: " + JSON.stringify(batchRunStats));
-                if(response && response.statusCode === 401) log.error("Check access_token/credentials. Expired/wrong?. Aborting processing.");
-                process.exit(1);
+                errMsg = "Error while PUTing batchRun Stats: ERROR: " + JSON.stringify(error) + " STATUS: " + response.statusCode + " RESPONSE: " + JSON.stringify(response) + " STATS: " + JSON.stringify(batchRunStats);
+                log.error(errMsg);
+                if(response && response.statusCode === 401) {
+                    errMsg = "Check access_token/credentials. Expired/wrong?. Aborting processing.";
+                    log.error(errMsg);
+                }
+                throw new Error(errMsg);
             } else {
                 batchRunVersion = body && body._version;
                 log.debug("Successfully updated batchRun Stats: " + JSON.stringify(body));
@@ -497,8 +519,9 @@ function updateBatchRun(error, cb6) {
             cb6();
         });
     } catch(e) {
-        log.error("Error while trying to update batchRun Stats: ERROR: " + JSON.stringify(e) + "STATS: " + JSON.stringify(batchRunStats));
-        process.exit(1);
+        errMsg = "Error while trying to update batchRun Stats: ERROR: " + JSON.stringify(e) + "STATS: " + JSON.stringify(batchRunStats);
+        log.error(errMsg);
+        throw new Error(errMsg);
     }
 }
 
@@ -523,14 +546,17 @@ function runJob(jobService, recData, cb3) {
 //18// Calling the jobService.onEachRecord(..) function to get the next record via callback, as a JSON (payload) for processing
     // 'payload' would contain a property called 'json', which is a json representation of the current record
     // The value of 'json' should be formatted as a valid payload for passing to the oe-cloud API specified by 'modelAPI' 
+    try {
     jobService.onEachRecord(recData, function cb2(payload, err) {
         
         // Get base URL of oe-cloud app
         var appBaseURL = process.env["APP_BASE_URL"] || payload && payload.appBaseURL || (jobService.options && jobService.options.appBaseURL);
         if(!appBaseURL) {
-            var msg = "appBaseURL is neither specified in processFile options nor passed in payload. Aborting job.";
-            log.fatal(msg);
-            updateBatchRun(msg, function() { process.exit(1); });
+            errMsg = "appBaseURL is neither specified in processFile options nor passed in payload. Aborting job.";
+            log.fatal(errMsg);
+            updateBatchRun(errMsg, function() { 
+                throw new Error(errMsg); 
+            });
         }
 
         // Get access token
@@ -552,18 +578,26 @@ function runJob(jobService, recData, cb3) {
         // Get the oe-cloud API to be called
         var api = process.env['MODEL_API'] ? process.env['MODEL_API'] : (payload.modelAPI ? payload.modelAPI : (jobService.options && jobService.options.modelAPI));
         if(!api) {
-            var msg = "modelAPI is neither specified in environment variable (MODEL_API) nor processFile options nor passed in payload. Aborting job."
-            log.fatal(msg);
-            updateBatchRun(msg, function() { process.exit(1); });
+            errMsg = "modelAPI is neither specified in environment variable (MODEL_API) nor processFile options nor passed in payload. Aborting job."
+            log.fatal(errMsg);
+            updateBatchRun(errMsg, function() { 
+            });
+            lr.pause();
+            limiter.updateSettings({reservoir: 0});
+            var retStatus = {fileRecordData: recData, payload: null, requestOpts: null, response: null, statusText: "FATAL", error: new Error(errMsg) };
+            try { jobService.onEachResult(retStatus); } catch(e) { console.log(e); log.error("Error after calling jobService.onEachResult(..): " + ((e && e.message) ? e.message : JSON.stringify(e))); }
+            return cb3(retStatus);
         }
 
         // Form the URL and get the method and headers
         var url = appBaseURL + (api.startsWith("/") ? "" : "/") + api + (access_token ? "?access_token=" + access_token : "");
         var method = payload.method || (jobService.options && jobService.options.method);
         if(!method) {
-            var msg = "method is neither specified in processFile options nor passed in payload. Aborting job.";
-            log.fatal(msg);
-            updateBatchRun(msg, function() { process.exit(1); });
+            errMsg = "method is neither specified in processFile options nor passed in payload. Aborting job.";
+            log.fatal(errMsg);
+            updateBatchRun(errMsg, function() { 
+            });
+            throw new Error(errMsg); 
         }
         var headers = { 'Cookie': 'Content-Type=application/json; charset=encoding; Accept=application/json' };
         var additionalHeaders = (payload.headers ? payload.headers : (jobService.options && jobService.options.headers));
@@ -610,11 +644,18 @@ function runJob(jobService, recData, cb3) {
         } catch(e) {
             totalRecordCount++; failureCount++;
             var retStatus = {fileRecordData: recData, payload: payload, requestOpts: opts, response: null, statusText: "FAILED", error: e };
-            try { jobService.onEachResult(retStatus); } catch(e) { console.log(3); log.error("3Error after calling jobService.onEachResult(..): " + ((e && e.message) ? e.message : JSON.stringify(e))); }
+            try { jobService.onEachResult(retStatus); } catch(e) { console.log(3); log.error("Error after calling jobService.onEachResult(..): " + ((e && e.message) ? e.message : JSON.stringify(e))); }
             return cb3(retStatus);
         }
 
     });
+    } catch(e) {
+        lr.pause();
+        limiter.updateSettings({reservoir: 0});
+        var retStatus = {fileRecordData: recData, payload: null, requestOpts: null, response: null, statusText: "FATAL", error: e };
+        try { jobService.onEachResult(retStatus); } catch(e) { console.log(e); log.error("Error after calling jobService.onEachResult(..): " + ((e && e.message) ? e.message : JSON.stringify(e))); }
+        return cb3(retStatus);
+    }
 }
 
 if (require.main === module) {

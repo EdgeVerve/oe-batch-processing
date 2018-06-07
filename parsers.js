@@ -2,6 +2,7 @@ if(!process.env["LOGGER_CONFIG"] && process.env["BATCH_LOGGER_CONFIG"]) {
     process.env["LOGGER_CONFIG"] = JSON.stringify({"levels":{"default":process.env["BATCH_LOGGER_CONFIG"].trim().toLocaleLowerCase()}});
 }
 var log = require('oe-logger')('parsers');
+var errmsg;
 
 function csvParser(options) {
     var csvHeaders, csvHeaderDataTypes, allHeadersString = false;
@@ -24,17 +25,17 @@ function csvParser(options) {
                     } else {
                         var errmsg = "parseCSV: CSV Headers specified as string is either empty or whitespace: '" + csvOptHeaders + "'. (options.csvHeaders - can be comma-separated string, string-array or object)";
                         log.error(errmsg);
-                        process.exit(1);
+                        throw new Error(errmsg);
                     }
                 } else {
                     var errmsg = "parseCSV: options.csvHeaders supplied are not of type string array or coma-separated string or object";
                     log.error(errmsg);
-                    process.exit(1);
+                    throw new Error(errmsg);
                 }
             } else {
                 var errmsg = "parseCSV: CSV Headers are missing in csvParser options (options.csvHeaders - can be comma-separated string, string-array or object)";
                 log.error(errmsg);
-                process.exit(1);
+                throw new Error(errmsg);
             }
         } 
 
@@ -54,7 +55,7 @@ function csvParser(options) {
                 } else {
                     var errmsg = "parseCSV: options.csvHeaderDataTypes supplied are not of type string array or coma-separated string or object";
                     log.error(errmsg);
-                    process.exit(1);
+                    throw new Error(errmsg);
                 }
             } else {
                 log.warn("parseCSV: csvHeaderDataTypes are neither supplied as options.csvHeaderDataTypes nor as part of options.csvHeaders object. Assuming that all headers are of type 'string'");
@@ -136,6 +137,50 @@ function CSVtoArray(text) {
 };
 
 
+
+
+function fwParser(options) {
+    var fwHeaders, fwHeaderDataTypes, allHeadersString = false;
+    this.onEachRecord = function onEachRecord (recData, cb) {
+        var payload, json = {};
+        if(!fwHeaders) {
+            if(options.fwHeaders) {  // if fwHeaders were supplied in some form
+                fwOptHeaders = options.fwHeaders;
+                if(typeof fwOptHeaders === 'object') { // if fwOptHeaders were supplied as an object or array (but not string)
+                    if(fwOptHeaders.length) { // fwOptHeaders were supplied as an array (of objects - assumption). Each element is of the form 
+                                              // {fieldName: 'accountNo', type: 'string', length: 16, startPosition: 1, endPosition: 16, justification: 'Left'}
+
+                        fwHeaders = fwOptHeaders; 
+                    } else {   // csvHeaders were supplied as an object
+                        var errmsg = "parseFW: FW Headers specified as object. Should be array of objects.";
+                        log.error(errmsg);
+                        throw new Error(errmsg);
+                    }
+    
+                } else if(typeof fwOptHeaders === 'string') {
+                    var errmsg = "parseFW: FW Headers specified as string. Should be array of objects.";
+                    log.error(errmsg);
+                    throw new Error(errmsg);
+
+                } else {
+                    var errmsg = "parseFW: options.fwHeaders supplied are not of type array (of objects)";
+                    log.error(errmsg);
+                    throw new Error(errmsg);
+                }
+            } else {
+                var errmsg = "parseFW: FW Headers are missing in fwParser options (options.fwHeaders - should be an array of objects)";
+                log.error(errmsg);
+                throw new Error(errmsg);
+            }
+        } 
+
+
+    };
+
+    return this;
+}
+
 module.exports = {
-    csvParser : csvParser
+    csvParser: csvParser,
+    fwParser:  fwParser
 }
