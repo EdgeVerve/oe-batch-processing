@@ -94,7 +94,7 @@ The `processFile(..)` function does the following in sequence -
 
 ## Configuration
 
-The *oe-Cloud batch-processing* module can be configured usind a config.json file at the root of the module. This config file has the following structure:
+The *oe-Cloud batch-processing* module can be configured usind a `config.json` file at the root of the module. This config file has the following structure:
 
 ```json
 {
@@ -127,7 +127,7 @@ A few other configurations are as follows:
 |environment variable `ACCESS_TOKEN`|Overrides `access_token` that may be set in `options.ctx`. `ACCESS_TOKEN` in environment variable also supercedes any user credentials supplied in `options.ctx`.|
 
 
-## Sample Usage - custom parser
+## Sample Usage - Custom Parser
 A sample usage of the *oe-Cloud batch-processing* module with *custom parser* is shown below:
 
 ```javascript
@@ -176,7 +176,8 @@ batchProcessing.processFile(filePath, options, jobService, function(e) {   // Ca
 ```
 
 
-## Sample BatchStatus record
+### Sample BatchStatus record
+The above code (`processFile()` function) inserts one record for every file-record processed into the *oe-Cloud* `BatchStatus` model. Shown below is a sample record from the `BatchStatus` model.
 
 (Audit fields removed for clarity)
 ```javascript
@@ -234,7 +235,9 @@ batchProcessing.processFile(filePath, options, jobService, function(e) {   // Ca
 
 
 
-## Sample BatchRun record
+### Sample BatchRun record
+A run of the `processFile()` function also inserts a summary record (one record for the complete run, which is for one data-file) into the *oe-Cloud* `BatchRun` model. 
+Shown below is a sample record from the `BatchRun` model.
 
 (Audit fields removed for clarity)
 ```javascript
@@ -269,19 +272,20 @@ batchProcessing.processFile(filePath, options, jobService, function(e) {   // Ca
 ```
 
 
-## Builtin Parsers
-This batch processing module includes the following parsers which can be used OTB with minimal configuration:
+# Builtin Parsers
+The *oe-Cloud batch-processing* module includes the following parsers which can be used OTB with minimal configuration:
 * CSV Parser
 * FW (Fixed Width) Parser
 
-These Parsers provide the ``onEachRecord`` function that needs to be part of the ``jobService`` object, which in turn is passed to the ``processFile`` function.
+These Parsers provide the ``onEachRecord`` function that needs to be part of the ``jobService`` object, which in turn is passed to the ``processFile`` function. 
+(See sample usage above to understand how these objects and functions are used)
 
-### CSV Parser
+## CSV Parser
 - The **CSV Parser** can be used to parse CSV (Comma Separated Value) data files, and also other delimited files by appropriately configuring the parser.
 - While parsing CSV, the comma (,) is allowed within data fields, provided such data fields are enclosed within double-quotes. 
 - The delimiter cannot be part of the data in case of non-CSV delimited files.
 
-#### CSV Parser Options
+### CSV Parser Options
 The *CSV Parser* is configured by passing a `parserOptions` object to it with the following properties
 
 |Config Property|Description|Default Value|Example|
@@ -344,11 +348,11 @@ batchProcessing.processFile(filePath, options, jobService, function(e) {   // Ca
 ```
 
 
-### FW Parser
+## FW Parser
 - The **FW Parser** can be used to parse FW (Fixed Width) data files by appropriately configuring the parser.
 
 
-#### FW Parser Options
+### FW Parser Options
 The *FW Parser* is configured by passing a `parserOptions` object to it with the following properties
 
 |Config Property|Description|Default Value|Example|
