@@ -286,7 +286,7 @@ The *CSV Parser* is configured by passing a `parserOptions` object to it with th
 
 |Config Property|Description|Default Value|Example|
 |--------|-----------|--------|--------|
-|delimiter|Optional. The delimiter used in the data file.|,|~|
+|delimiter|Optional. The delimiter used in the data file. Default is comma (,)|, (comma)|~|
 |csvHeaders|Mandatory. A string of comma-separated values or a JSON array of strings containing the list of headers of the columns in the data-file. These will be used as field names while posting the data to the oe-Cloud application. The number of csvHeaders must be >= the number of data-fields. If the number of csvHeaders !== the number of data-fields, an error is thrown for this record. Leading and/or trailing whitespace for header-names is okay.| No default headers are provided.|accountNo,name,age,gender|
 |csvHeaderDataTypes|Optional. A string of comma-separated values or a JSON array of strings containing the list of header-data-types of the columns in the data-file. These will be used to determine whether the posted data is to be enclosed in quotes or not. The possible data-type values are: string, number and boolean.|string,string,string,... (i.e., all fields are assumed to be of type 'string')|string,number,string,string,boolean|
 |ignoreExtraHeaders|Optional. A boolean flag, if set to true, ignores the case where there are more headers specified than the number of fields in the data file|false|false|
@@ -330,6 +330,69 @@ var jobService = {                                         // Create a jobServic
                 cb();
     },
     onEachRecord: csvParser.onEachRecord,                  // Using built-in CSV parser
+    
+    onEachResult: function onEachResult (result) {         // Optional
+        //console.log("Inside jobService.onEachResult: " + JSON.stringify(result));
+    }
+};
+
+batchProcessing.processFile(filePath, options, jobService, function(e) {   // Calling the processFile(..) function to start processing the file
+    if(!e) console.log("file "+ filePath +" processed successfully");
+    else console.error(e);
+});
+
+```
+
+
+### FW Parser
+- The **FW Parser** can be used to parse FW (Fixed Width) data files by appropriately configuring the parser.
+
+
+#### FW Parser Options
+The *FW Parser* is configured by passing a `parserOptions` object to it with the following properties
+
+|Config Property|Description|Default Value|Example|
+|--------|-----------|--------|--------|
+|fwHeaders|Mandatory. An array of objects, each object containing the metadata of a single field. The array should have as many elements as there are fields to parse in the data-file. Each object should have the following mandatory properties: `fieldName`, `type`, `startPosition`,`endPosition`| No default headers are provided.|```[{ fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5 }, { fieldName: 'value', type: 'boolean', length: 8, startPosition: 6, endPosition: 13 }]```|
+
+
+
+## Sample Usage - FW Parser
+A sample usage of the *oe-Cloud batch-processing* module with *fw parser* is shown below:
+
+```javascript
+
+var batchProcessing = require('batch-processing');   // require the batch-processing module
+
+var filePath = 'test/testdata.txt';   // File to process
+
+var options = {                       // options object
+        //ctx: {access_token: 'P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx'},      // ignored if user credentials are passed
+        ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},                      // supercedes access_token
+        appBaseURL: 'http://localhost:3000',                                                            // ignored if appBaseURL is present in payload
+        modelAPI: '/api/Literals',                                                                      // ignored if modelAPI is present in payload
+        method: 'POST',                                                                                 // ignored if method is present in payload
+        headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}  // ignored if headers is present in payload      
+    };
+
+var parserOptions = {
+    fwHeaders: [
+        { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5 },        
+        { fieldName: 'value', type: 'boolean', length: 8, startPosition: 6, endPosition: 13 }
+    ]
+};  
+
+var fwParser = parsers.fwParser(parserOptions);            // Create a fwParser object by passing parserOptions
+
+var jobService = {                                         // Create a jobService object
+
+    onStart: function onStart (cb) {                       // Optional
+                cb({});
+            },
+    onEnd: function onEnd (cb) {                           // Optional
+                cb();
+    },
+    onEachRecord: fwParser.onEachRecord,                   // Using built-in FW parser
     
     onEachResult: function onEachResult (result) {         // Optional
         //console.log("Inside jobService.onEachResult: " + JSON.stringify(result));
