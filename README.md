@@ -168,8 +168,9 @@ var jobService = {
     
 };
 
-batchProcessing.processFile(filePath, options, jobService, function() {   // call the processFile(..) function to start the batch processing
-    console.log("file processed successfully");
+batchProcessing.processFile(filePath, options, jobService, function(e) {   // Calling the processFile(..) function to start processing the file
+    if(!e) console.log("file "+ filePath +" processed successfully");
+    else console.error(e);
 });
 
 ```
@@ -280,7 +281,7 @@ These Parsers provide the ``onEachRecord`` function that needs to be part of the
 - While parsing CSV, the comma (,) is allowed within data fields, provided such data fields are enclosed within double-quotes. 
 - The delimiter cannot be part of the data in case of non-CSV delimited files.
 
-#### Parser Options
+#### CSV Parser Options
 The *CSV Parser* is configured by passing a `parserOptions` object to it with the following properties
 
 |Config Property|Description|Default Value|Example|
@@ -292,3 +293,52 @@ The *CSV Parser* is configured by passing a `parserOptions` object to it with th
 |ignoreExtraHeaderDataTypes|Optional. A boolean flag, if set to true, ignores the case where there are more header-data-types specified than the number of fields in the data file|false|false|
 
 
+## Sample Usage - CSV Parser
+A sample usage of the *oe-Cloud batch-processing* module with *csv parser* is shown below:
+
+```javascript
+
+var batchProcessing = require('batch-processing');   // require the batch-processing module
+
+var filePath = 'test/testdata.txt';   // File to process
+
+var options = {                       // options object
+        //ctx: {access_token: 'P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx'},      // ignored if user credentials are passed
+        ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},                      // supercedes access_token
+        appBaseURL: 'http://localhost:3000',                                                            // ignored if appBaseURL is present in payload
+        modelAPI: '/api/Literals',                                                                      // ignored if modelAPI is present in payload
+        method: 'POST',                                                                                 // ignored if method is present in payload
+        headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}  // ignored if headers is present in payload      
+    };
+
+var parserOptions = {   // Create the parserOptions object
+//    delimiter: ' ',                        // Optional. Default is ',' (comma)
+    csvHeaders: ' key, value ',              // Mandatory. No. of csvHeaders (#csvHeaders) must be >= #data-fields. If #csvHeaders !== #data-fields, defaults to error. Whitespace is okay.
+//    csvHeaderDataTypes: 'string, number',  // Optional. Default is 'string,string,string,...' (all fields are considered as type string). #csvHeaderDataTypes must be >= #data-fields. If #csvHeaderDataTypes !== #data-fields, defaults to error. Whitespace is okay.
+    ignoreExtraHeaders: true,                // Optional. Default is false. If true, prevents error when #csvHeaders > #data-fields 
+    ignoreExtraHeaderDataTypes: true         // Optional. Default is false. If true, prevents error when #csvHeaderDataTypes > #data-fields 
+}  
+
+var csvParser = parsers.csvParser(parserOptions);          // Create a csvParser object by passing parserOptions
+
+var jobService = {                                         // Create a jobService object
+
+    onStart: function onStart (cb) {                       // Optional
+                cb({});
+            },
+    onEnd: function onEnd (cb) {                           // Optional
+                cb();
+    },
+    onEachRecord: csvParser.onEachRecord,                  // Using built-in CSV parser
+    
+    onEachResult: function onEachResult (result) {         // Optional
+        //console.log("Inside jobService.onEachResult: " + JSON.stringify(result));
+    }
+};
+
+batchProcessing.processFile(filePath, options, jobService, function(e) {   // Calling the processFile(..) function to start processing the file
+    if(!e) console.log("file "+ filePath +" processed successfully");
+    else console.error(e);
+});
+
+```
