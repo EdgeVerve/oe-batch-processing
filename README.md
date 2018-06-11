@@ -127,33 +127,8 @@ A few other configurations are as follows:
 |environment variable `ACCESS_TOKEN`|Overrides `access_token` that may be set in `options.ctx`. `ACCESS_TOKEN` in environment variable also supercedes any user credentials supplied in `options.ctx`.|
 
 
-## Builtin Parsers
-This batch processing module includes the following parsers which can be used OTB with minimal configuration:
-* CSV Parser
-* FW (Fixed Width) Parser
-
-These Parsers provide the ``onEachRecord`` function that needs to be part of the ``jobService`` object, which in turn is passed to the ``processFile`` function.
-
-### CSV Parser
-- The **CSV Parser** can be used to parse CSV (Comma Separated Value) data files, and also other delimited files by appropriately configuring the parser.
-- While parsing CSV, the comma (,) is allowed within data fields, provided such data fields are enclosed within double-quotes. 
-- The delimiter cannot be part of the data in case of non-CSV delimited files.
-
-#### Parser Options
-The *CSV Parser* is configured by passing a `parserOptions` object to it withthe following properties
-
-|Config Property|Description|Default Value|Example|
-|--------|-----------|--------|--------|
-|delimiter|The delimiter used in the data file. Optional|,|~|
-|csvHeaders|A string of comma-separated values or a JSON array of strings containing the list of headers of the columns in the data-file. These will be used as field names while posting the data to the oe-Cloud application. The number of csvHeaders must be >= the number of data-fields. If the number of csvHeaders !== the number of data-fields, an error is thrown for this record. Leading and/or trailing whitespace for header-names is okay.| |accountNo,name,age,gender|
-|csvHeaderDataTypes|A string of comma-separated values or a JSON array of strings containing the list of header-data-types of the columns in the data-file. These will be used to determine whether the posted data is to be enclosed in quotes or not. The possible data-type values are: string, number and boolean.|string,string,string,... (i.e., all fields are assumed to be of type 'string')|string,number,string,string,boolean|
-|ignoreExtraHeaders|||
-|ignoreExtraHeaderDataTypes|||
-||||
-
-
-## Sample Usage
-A sample usage of the *oe-Cloud batch-processing* module is shown below:
+## Sample Usage - custom parser
+A sample usage of the *oe-Cloud batch-processing* module with *custom parser* is shown below:
 
 ```javascript
 
@@ -293,5 +268,27 @@ batchProcessing.processFile(filePath, options, jobService, function() {   // cal
 ```
 
 
+## Builtin Parsers
+This batch processing module includes the following parsers which can be used OTB with minimal configuration:
+* CSV Parser
+* FW (Fixed Width) Parser
+
+These Parsers provide the ``onEachRecord`` function that needs to be part of the ``jobService`` object, which in turn is passed to the ``processFile`` function.
+
+### CSV Parser
+- The **CSV Parser** can be used to parse CSV (Comma Separated Value) data files, and also other delimited files by appropriately configuring the parser.
+- While parsing CSV, the comma (,) is allowed within data fields, provided such data fields are enclosed within double-quotes. 
+- The delimiter cannot be part of the data in case of non-CSV delimited files.
+
+#### Parser Options
+The *CSV Parser* is configured by passing a `parserOptions` object to it with the following properties
+
+|Config Property|Description|Default Value|Example|
+|--------|-----------|--------|--------|
+|delimiter|Optional. The delimiter used in the data file.|,|~|
+|csvHeaders|Mandatory. A string of comma-separated values or a JSON array of strings containing the list of headers of the columns in the data-file. These will be used as field names while posting the data to the oe-Cloud application. The number of csvHeaders must be >= the number of data-fields. If the number of csvHeaders !== the number of data-fields, an error is thrown for this record. Leading and/or trailing whitespace for header-names is okay.| No default headers are provided.|accountNo,name,age,gender|
+|csvHeaderDataTypes|Optional. A string of comma-separated values or a JSON array of strings containing the list of header-data-types of the columns in the data-file. These will be used to determine whether the posted data is to be enclosed in quotes or not. The possible data-type values are: string, number and boolean.|string,string,string,... (i.e., all fields are assumed to be of type 'string')|string,number,string,string,boolean|
+|ignoreExtraHeaders|Optional. A boolean flag, if set to true, ignores the case where there are more headers specified than the number of fields in the data file|false|false|
+|ignoreExtraHeaderDataTypes|Optional. A boolean flag, if set to true, ignores the case where there are more header-data-types specified than the number of fields in the data file|false|false|
 
 
