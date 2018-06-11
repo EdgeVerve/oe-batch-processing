@@ -6,7 +6,7 @@
  */
 /**
  * This sample usage file uses the batch-processing module and runs standalone with 
- * `node sample-usage.js`  command.
+ * `node sample-usage-with-custom.js`  command.
  * 
  * A custom (user-defined) function is used to parse the data-file.
  * 
@@ -18,7 +18,7 @@
  * For authentication to the oeCloud app, `options.ctx` can either contain `username`, 
  * `password` and `tenantId` or it can contain just a valid `access_token`.
 
- * @file sample-usage.js
+ * @file sample-usage-with-custom-parser.js
  * @author Ajith Vasudevan
  */
 
@@ -52,7 +52,10 @@ var jobService = {                        // Create a jobService object
             //method: "POST",                  // Optional
             //headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}   // Optional
         };
-        cb(payload, payload ? null : "Couldn't get payload for recId " + (recData && recData.recId));
+        var errMsg = payload ? null : "Couldn't get payload for recId " + (recData && recData.recId);
+        cb(payload, errMsg);    // If a valid payload could be created, set second param to null
+                                // If a valid payload could not be created, set second param to the error message
+                                // If this record needs to be ignored, set both params to null;
     },
 
     onEachResult: function onEachResult (result) {                                     // Optional
@@ -62,6 +65,7 @@ var jobService = {                        // Create a jobService object
 
 var batchProcessing = require(".");                                                    // Requiring the batch-processing module
 
-batchProcessing.processFile(filePath, options, jobService, function() {                // Calling the processFile(..) function to start processing the file
-    console.log("file "+ filePath +" processed successfully");
+batchProcessing.processFile(filePath, options, jobService, function(e) {                // Calling the processFile(..) function to start processing the file
+    if(!e) console.log("file "+ filePath +" processed successfully");
+    else console.log(e);
 });

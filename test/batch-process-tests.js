@@ -140,13 +140,12 @@ describe("batch-processing-tests", function () {
         jobService = {onEachRecord: onEachRecord};
 
         a.processFile(filePath, options, jobService, function(e) {
-            console.log(e);
+            if(e) console.log(e);
             done(e);
         });
     });
 
-    xit('should call processFile with built-in CSV Parser', function (done) {
-        log.debug("Starting processFile test with built-in CSV Parser");
+    it('should call processFile with built-in CSV Parser and no csvHeaders in parseOpts, should fail with expected message', function (done) {
         var filePath = "test/batch-100.csv";
         var options = { 
                 //ctx: {access_token: "P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx"},
@@ -159,14 +158,20 @@ describe("batch-processing-tests", function () {
 
         var parsers = require('../parsers');
 
+        // var parserOpts = {
+        // //    delimiter: ' ',                        // Optional. Default is ',' (comma)
+        //     csvHeaders: ' key, value ',              // Mandatory. No. of csvHeaders (#csvHeaders) must be >= #data-fields. If #csvHeaders !== #data-fields, defaults to error. Whitespace is okay.
+        // //    csvHeaderDataTypes: ' string ',        // Optional. Default is 'string,string,string,...' (all fields are considered as type string). #csvHeaderDataTypes must be >= #data-fields. If #csvHeaderDataTypes !== #data-fields, defaults to error. Whitespace is okay.
+        //     ignoreExtraHeaders: true,                // Optional. Default is false. If true, prevents error when #csvHeaders > #data-fields 
+        //     ignoreExtraHeaderDataTypes: true         // Optional. Default is false. If true, prevents error when #csvHeaderDataTypes > #data-fields 
+        // }    
+
         var parserOpts = {
-        //    delimiter: ' ',                        // Optional. Default is ',' (comma)
-            csvHeaders: ' key, value ',              // Mandatory. No. of csvHeaders (#csvHeaders) must be >= #data-fields. If #csvHeaders !== #data-fields, defaults to error. Whitespace is okay.
-        //    csvHeaderDataTypes: ' string ',        // Optional. Default is 'string,string,string,...' (all fields are considered as type string). #csvHeaderDataTypes must be >= #data-fields. If #csvHeaderDataTypes !== #data-fields, defaults to error. Whitespace is okay.
-            ignoreExtraHeaders: true,                // Optional. Default is false. If true, prevents error when #csvHeaders > #data-fields 
-            ignoreExtraHeaderDataTypes: true         // Optional. Default is false. If true, prevents error when #csvHeaderDataTypes > #data-fields 
-        }    
-        
+//                csvHeaders: ' key, value ',              // Mandatory. No. of csvHeaders (#csvHeaders) must be >= #data-fields. If #csvHeaders !== #data-fields, defaults to error. Whitespace is okay.
+                ignoreExtraHeaders: true,                // Optional. Default is false. If true, prevents error when #csvHeaders > #data-fields 
+                ignoreExtraHeaderDataTypes: true         // Optional. Default is false. If true, prevents error when #csvHeaderDataTypes > #data-fields 
+        } 
+
         var csvParser = parsers.csvParser(parserOpts);
         
         var jobService = {
@@ -186,59 +191,275 @@ describe("batch-processing-tests", function () {
         
         a = require("..");                           // requiring the batch-processing module
 
-        a.processFile(filePath, options, jobService, done);   // Calling the processFile(..) function to start processing the file
+        a.processFile(filePath, options, jobService, function(e) {  // Calling the processFile(..) function to start processing the file
+            console.log(e);
+            if(e && e.message && e.message.indexOf('CSV Headers are missing in csvParser options') > -1) done();
+            else done(new Error('Did not fail with expected message'));
+        });   
 
     });
 
 
-    xit('should call processFile with FW Parser and empty parserOpts, and it should fail with expected error message', function (done) {
-        log.debug("Starting processFile test with built-in FW Parser");
-        var filePath = "test/batch-100.csv";
-        var options = { 
-                ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},
-                appBaseURL: 'http://localhost:3000',
-                modelAPI: '/api/Literals',
-                method: 'POST'         
-            };
-        
-        var parsers = require('../parsers');
-        
-        var parserOpts = {
-        }    
-        
-        var fwParser = parsers.fwParser(parserOpts);
-        
-        var jobService = {
-        
-            onStart: function onStart (cb) {         // Optional
-                        cb({});
-                    },
-            onEnd: function onEnd (cb) {             // Optional
-                        cb();
-            },
-            onEachRecord: fwParser.onEachRecord,    // using built-in CSV parser
-            
-            onEachResult: function onEachResult (result) {   // Optional
-                log.debug("Inside jobService.onEachResult: " + JSON.stringify(result));
-            }
+    filePath = "test/fwbatch-100.fwv";
+    options = { 
+            ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},
+            appBaseURL: 'http://localhost:3000',
+            modelAPI: '/api/Literals',
+            method: 'POST'         
         };
+    
+    parsers = require('../parsers');
+    
+    parserOpts = {   // Empty parserOpts
+    }    
+    
+    fwParser = parsers.fwParser(parserOpts);
+    
+    jobServiceFW = {
+    
+        onStart: function onStart (cb) {         // Optional
+                    cb({});
+                },
+        onEnd: function onEnd (cb) {             // Optional
+                    cb();
+        },
+        onEachRecord: fwParser.onEachRecord,    // using built-in CSV parser
         
-        a = require("..");                           // requiring the batch-processing module
+        onEachResult: function onEachResult (result) {   // Optional
+            log.debug("Inside jobService.onEachResult: " + JSON.stringify(result));
+        }
+    };
+    
+    a = require("..");                           // requiring the batch-processing module
 
-        a.processFile(filePath, options, jobService, function(e) {  // Calling the processFile(..) function to start processing the file
-            console.log(e.message);
-            if(e && e.message==='Error: parseFW: FW Headers are missing in fwParser options (options.fwHeaders - should be an array of objects)') {
-                done();
-            }
+
+    it('should call processFile with FW Parser and empty parserOpts, and it should fail with expected error message', function (done) {
+
+        parserOpts = {    // empty parserOpts object
+        };
+
+        fwParser = parsers.fwParser(parserOpts);
+
+        jobServiceFW.onEachRecord = fwParser.onEachRecord;
+
+        a.processFile(filePath, options, jobServiceFW, function(e) {  // Calling the processFile(..) function to start processing the file
+            console.log(e);
+            if(e && e.message==='Error: parseFW: FW Headers are missing in fwParser options (options.fwHeaders - should be an array of objects)') done();
             else done(new Error("Didn't fail with expected error message"));
-            console.log("Done Processing"); 
         });   
     });
 
 
+    it('should call processFile with FW Parser and empty parserOpts.fwHeaders object, and it should fail with expected error message', function (done) {
+
+        parserOpts = {
+            fwHeaders: {}    // empty parserOpts.fwHeaders object
+        };
+
+        fwParser = parsers.fwParser(parserOpts);
+
+        jobServiceFW.onEachRecord = fwParser.onEachRecord;
+
+        a.processFile(filePath, options, jobServiceFW, function(e) {  // Calling the processFile(..) function to start processing the file
+            console.log(e);
+            if(e && e.message && e.message.indexOf('parseFW: FW Headers specified as object. Should be array of objects.') > -1) done();
+            else done(new Error("Didn't fail with expected error message"));
+        });   
+    });
+
+    it('should call processFile with FW Parser and parserOpts.fwHeaders as string, and it should fail with expected error message', function (done) {
+
+        parserOpts = {
+            fwHeaders: 'key,value'    // empty parserOpts.fwHeaders object
+        };
+
+        fwParser = parsers.fwParser(parserOpts);
+
+        jobServiceFW.onEachRecord = fwParser.onEachRecord;
+
+        a.processFile(filePath, options, jobServiceFW, function(e) {  // Calling the processFile(..) function to start processing the file
+            console.log(e);
+            if(e && e.message && e.message.indexOf('parseFW: options.fwHeaders supplied are not of type array (of objects)') > -1) done();
+            else done(new Error("Didn't fail with expected error message"));
+        });   
+    });
+
+
+    it('should call processFile with FW Parser and parserOpts.fwHeaders as empty array, and it should fail with expected message', function (done) {
+
+        parserOpts = {
+            fwHeaders: []
+        };
+
+        fwParser = parsers.fwParser(parserOpts);
+
+        jobServiceFW.onEachRecord = fwParser.onEachRecord;
+
+        a.processFile(filePath, options, jobServiceFW, function(e) {  // Calling the processFile(..) function to start processing the file
+            console.log(e);
+            if(e && e.message && e.message.indexOf('parseFW: FW Headers specified as empty array. Should be array of objects.') > -1) done();
+            else done(new Error("Didn't fail with expected error message"));
+        });   
+    });
+
+    it('should call processFile with FW Parser and CORRECT parserOpts, and it should NOT fail', function (done) {
+
+        parserOpts = {
+            fwHeaders: [
+                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5, justification: 'Left' },
+                { fieldName: 'value', type: 'boolean', length: 8, startPosition: 6, endPosition: 13, justification: 'Left' }
+            ]
+        };
+
+        fwParser = parsers.fwParser(parserOpts);
+
+        jobServiceFW.onEachRecord = fwParser.onEachRecord;
+
+        a.processFile(filePath, options, jobServiceFW, function(e) {  // Calling the processFile(..) function to start processing the file
+            if(e) done(e);
+            else done();
+        });   
+    });
+
+
+    it('should call processFile with FW Parser and record length < max-header-position, and it should not fail', function (done) {
+
+        parserOpts = {
+            fwHeaders: [
+                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5, justification: 'Left' },
+                { fieldName: 'value', type: 'string', length: 8, startPosition: 6, endPosition: 15, justification: 'Left' }   // record-length (13) < max-endPosition (15) 
+            ]
+        };
+
+        fwParser = parsers.fwParser(parserOpts);
+
+        jobServiceFW.onEachRecord = fwParser.onEachRecord;
+
+        a.processFile(filePath, options, jobServiceFW, function(e) {  // Calling the processFile(..) function to start processing the file
+            if(e) done(e);
+            else done();
+        });   
+    });
+
+    it('should call processFile with FW Parser and record length > max-header-position, and it should not fail', function (done) {
+
+        parserOpts = {
+            fwHeaders: [
+                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5, justification: 'Left' },
+                { fieldName: 'value', type: 'string', length: 8, startPosition: 6, endPosition: 11, justification: 'Left' }   // record-length (13) > max-endPosition (11) 
+            ]
+        };
+
+        fwParser = parsers.fwParser(parserOpts);
+
+        jobServiceFW.onEachRecord = fwParser.onEachRecord;
+
+        a.processFile(filePath, options, jobServiceFW, function(e) {  // Calling the processFile(..) function to start processing the file
+            if(e) done(e);
+            else done();
+        });   
+    });
+
+    it('should call processFile with FW Parser and wrong data-type, and it should not fail', function (done) {
+
+        parserOpts = {
+            fwHeaders: [
+                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5, justification: 'Left' },
+                { fieldName: 'value', type: 'number', length: 8, startPosition: 6, endPosition: 13, justification: 'Left' }   // wrong type: number 
+            ]
+        };
+
+        fwParser = parsers.fwParser(parserOpts);
+
+        jobServiceFW.onEachRecord = fwParser.onEachRecord;
+
+        a.processFile(filePath, options, jobServiceFW, function(e) {  // Calling the processFile(..) function to start processing the file
+            if(e) done(e);
+            else done();
+        });   
+    });
+
+    it('should call processFile with FW Parser and without fieldName, and it should fail with expected error message', function (done) {
+
+        parserOpts = {
+            fwHeaders: [
+                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5, justification: 'Left' },   
+                { type: 'string', length: 8, startPosition: 6, endPosition: 13, justification: 'Left' }                       // missing fieldName 
+            ]
+        };
+
+        fwParser = parsers.fwParser(parserOpts);
+
+        jobServiceFW.onEachRecord = fwParser.onEachRecord;
+
+        a.processFile(filePath, options, jobServiceFW, function(e) {  // Calling the processFile(..) function to start processing the file
+            if(e && e.message && e.message.indexOf('parseFW: Header fieldName is missing') > -1) done();
+            else done("Didn't fail with expected error message");
+        });   
+    });
+
+
+    it('should call processFile with FW Parser and without type, and it should fail with expected error message', function (done) {
+
+        parserOpts = {
+            fwHeaders: [
+                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5, justification: 'Left' },   
+                { fieldName: 'value', length: 8, startPosition: 6, endPosition: 13, justification: 'Left' }                    // missing type 
+            ]
+        };
+
+        fwParser = parsers.fwParser(parserOpts);
+
+        jobServiceFW.onEachRecord = fwParser.onEachRecord;
+
+        a.processFile(filePath, options, jobServiceFW, function(e) {  // Calling the processFile(..) function to start processing the file
+            if(e && e.message && e.message.indexOf('parseFW: Header type is missing') > -1) done();
+            else done("Didn't fail with expected error message");
+        });   
+    });
+
+
+    it('should call processFile with FW Parser and without startPosition, and it should fail with expected error message', function (done) {
+
+        parserOpts = {
+            fwHeaders: [
+                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5, justification: 'Left' },
+                { fieldName: 'value', type: 'string', length: 8, endPosition: 13, justification: 'Left' }          // missing startPosition 
+            ]
+        };
+
+        fwParser = parsers.fwParser(parserOpts);
+
+        jobServiceFW.onEachRecord = fwParser.onEachRecord;
+
+        a.processFile(filePath, options, jobServiceFW, function(e) {  // Calling the processFile(..) function to start processing the file
+            if(e && e.message && e.message.indexOf('parseFW: Header startPosition is missing') > -1) done();
+            else done("Didn't fail with expected error message");
+        });   
+    });    
+
+    it('should call processFile with FW Parser and without endPosition, and it should fail with expected error message', function (done) {
+
+        parserOpts = {
+            fwHeaders: [
+                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, justification: 'Left' },             // missing endPosition 
+                { fieldName: 'value', type: 'string', length: 8, startPosition: 6, endPosition: 13, justification: 'Left' }   
+            ]
+        };
+
+        fwParser = parsers.fwParser(parserOpts);
+
+        jobServiceFW.onEachRecord = fwParser.onEachRecord;
+
+        a.processFile(filePath, options, jobServiceFW, function(e) {  // Calling the processFile(..) function to start processing the file
+            if(e && e.message && e.message.indexOf('parseFW: Header endPosition is missing') > -1) done();
+            else done("Didn't fail with expected error message");
+        });   
+    });
+
     after('tests', function (done) {
         log.debug("after all tests");
         done();
-        setInterval(function() {process.exit(0);}, 1000);
+        //setInterval(function() {process.exit(0);}, 1000);
     });
 });

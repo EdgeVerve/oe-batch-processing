@@ -141,16 +141,19 @@ function processFile(filePath, options, jobService, cb) {
     if(!filePath || filePath.trim().length === 0) {
         errMsg = "filePath is not specified. Aborting processing.";
         log.fatal(errMsg);
+        clearInterval(progressInterval);
         return cb(new Error(errMsg));
     }
     if(!jobService) {
         errMsg = "jobService is not specified. Aborting processing."
         log.fatal(errMsg);
+        clearInterval(progressInterval);
         return cb(new Error(errMsg));
     }
     if(!(jobService.onEachRecord && typeof jobService.onEachRecord === 'function')) {
         errMsg = "jobService.onEachRecord() is not defined. Aborting processing.";
         log.fatal(errMsg);
+        clearInterval(progressInterval);
         return cb(new Error(errMsg));
     }
 
@@ -188,6 +191,7 @@ function processFile(filePath, options, jobService, cb) {
             // Upon a limiter error, Updating the previously inserted BatchRun record with stats and exiting thereafter
             // updateBatchRun(errMsg, function() { 
             // });
+            clearInterval(progressInterval);
             return cb(error);
         }
     });
@@ -226,6 +230,7 @@ function processFile(filePath, options, jobService, cb) {
             if(!appBaseURL) {
                 errMsg = "appBaseURL is neither specified in env var (APP_BASE_URL) nor in processFile options. Aborting job.";
                 log.fatal(errMsg);
+                clearInterval(progressInterval);
                 throw new Error(errMsg);
             }
 
@@ -266,6 +271,7 @@ function processFile(filePath, options, jobService, cb) {
                             errMsg = "Check if oe-Cloud app has the necessary models required for batch-processing: `BatchStatus` and `BatchRun`. Aborting processing.";
                             console.log("\n"+ errMsg +"\n");
                         }
+                        clearInterval(progressInterval);
                         cb(new Error(errMsg));
                     } else {
                         batchRunVersion = body && body._version;
@@ -316,6 +322,7 @@ function processFile(filePath, options, jobService, cb) {
                                     lr.pause();
                                     limiter.updateSettings({reservoir: 0});
                                     console.log(result);
+                                    clearInterval(progressInterval);
                                     throw new Error(result.error);
                                 }
 
@@ -366,6 +373,7 @@ function processFile(filePath, options, jobService, cb) {
                             console.log(errMsg);
                             updateBatchRun(errMsg, function() { 
                             });
+                            clearInterval(progressInterval);
                             cb(err);
                         });
                         lr.on('end', function(){  // handle end of file
@@ -566,7 +574,7 @@ function runJob(jobService, recData, cb3) {
         // Check for error from onEachRecord
         if(err) {  // Do not proceed with POSTing in there was an error
             log.error("There was an error processing file record to JSON: " + JSON.stringify(err));
-            var retStatus = {fileRecordData: recData, payload: payload, status: "FAILED", error: err };
+            var retStatus = {fileRecordData: recData, payload: payload, statusText: "FAILED", error: err };
             totalRecordCount++; failureCount++;
             try { jobService.onEachResult(retStatus); } catch(e) { console.log(1); log.error("Error after calling jobService.onEachResult(..): " + ((e && e.message) ? e.message : JSON.stringify(e))); }
             return cb3(retStatus);

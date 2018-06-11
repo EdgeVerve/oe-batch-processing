@@ -137,44 +137,91 @@ function CSVtoArray(text) {
 };
 
 
-
-
 function fwParser(options) {
-    var fwHeaders, fwHeaderDataTypes, allHeadersString = false;
+    var fwOptHeaders, fwHeaders, fwHeaderDataTypes, allHeadersString = false;
+
     this.onEachRecord = function onEachRecord (recData, cb) {
         var payload, json = {};
+        var errMsg, error, pos = 0;
         if(!fwHeaders) {
             if(options.fwHeaders) {  // if fwHeaders were supplied in some form
                 fwOptHeaders = options.fwHeaders;
                 if(typeof fwOptHeaders === 'object') { // if fwOptHeaders were supplied as an object or array (but not string)
-                    if(fwOptHeaders.length) { // fwOptHeaders were supplied as an array (of objects - assumption). Each element is of the form 
+                    if(fwOptHeaders.length === 0) {
+                        errmsg = "parseFW: FW Headers specified as empty array. Should be array of objects.";
+                        log.error(errmsg);
+                        throw new Error(errmsg);
+                    }
+                    else if(fwOptHeaders.length) { // fwOptHeaders were supplied as an array (of objects - assumption). Each element is of the form 
                                               // {fieldName: 'accountNo', type: 'string', length: 16, startPosition: 1, endPosition: 16, justification: 'Left'}
-
                         fwHeaders = fwOptHeaders; 
                     } else {   // csvHeaders were supplied as an object
-                        var errmsg = "parseFW: FW Headers specified as object. Should be array of objects.";
+                        errmsg = "parseFW: FW Headers specified as object. Should be array of objects.";
                         log.error(errmsg);
                         throw new Error(errmsg);
                     }
     
-                } else if(typeof fwOptHeaders === 'string') {
-                    var errmsg = "parseFW: FW Headers specified as string. Should be array of objects.";
-                    log.error(errmsg);
-                    throw new Error(errmsg);
-
                 } else {
-                    var errmsg = "parseFW: options.fwHeaders supplied are not of type array (of objects)";
+                    errmsg = "parseFW: options.fwHeaders supplied are not of type array (of objects)";
                     log.error(errmsg);
                     throw new Error(errmsg);
                 }
             } else {
-                var errmsg = "parseFW: FW Headers are missing in fwParser options (options.fwHeaders - should be an array of objects)";
+                errmsg = "parseFW: FW Headers are missing in fwParser options (options.fwHeaders - should be an array of objects)";
                 log.error(errmsg);
                 throw new Error(errmsg);
             }
+
+            errmsg = undefined;
+            fwHeaders.forEach(function(headerObj, i) {
+                if(!headerObj.fieldName) errmsg = "parseFW: Header fieldName is missing in " + JSON.stringify(headerObj) + " at index " + i;
+                else if(!headerObj.type) errmsg = "parseFW: Header type is missing in " + JSON.stringify(headerObj) + " at index " + i;
+                else if(!headerObj.startPosition) errmsg = "parseFW: Header startPosition is missing in " + JSON.stringify(headerObj) + " at index " + i;
+                else if(!headerObj.endPosition) errmsg = "parseFW: Header endPosition is missing in " + JSON.stringify(headerObj) + " at index " + i;
+                if(errmsg) throw new Error(errmsg);
+            });
+
         } 
 
+        errMsg = undefined;
 
+        if(!recData.rec) throw new Error("parseFW: Record not found in recData");
+
+        if(recData.rec.length > fwHeaders[fwHeaders.length - 1].endPosition) errMsg = "parseFW: Record length is larger than max-header-position ( "+ recData.rec.length + " > " + fwHeaders[fwHeaders.length - 1].endPosition +  " )";
+        else if(recData.rec.length < fwHeaders[fwHeaders.length - 1].endPosition) errMsg = "parseFW: Record length is smaller than max-header-position ( "+ recData.rec.length + " < " + fwHeaders[fwHeaders.length - 1].endPosition +  " )";
+
+        if(errMsg) return cb({}, errMsg);
+       
+        fwHeaders.forEach(function(headerObj) {
+            var fieldStr = recData.rec.substring(headerObj.startPosition-1, headerObj.endPosition);
+            var fValue;
+            if(headerObj.type.toLowerCase().trim() === 'number') {
+                fValue = Number(fieldStr);
+                if(isNaN(fValue)) {
+                    error = "parseFW: Data of fieldValue '" + fieldStr + "' at position "+ headerObj.startPosition + "," + headerObj.endPosition  + " did not match type 'number'"
+                    fValue = fieldStr;
+                }
+            } else if(headerObj.type.toLowerCase().trim() === 'boolean') {
+                fValue = fieldStr.toLowerCase();
+                if(fValue === 'true') {
+                    fValue = true;
+                } else if(fValue === 'false') {
+                    fValue = false;
+                } else {
+                    error = "parseFW: Data of fieldValue '" + fieldStr + "' at position "+ headerObj.startPosition + "," + headerObj.endPosition  + " did not match type 'boolean'. Only true, false, TRUE, FALSE are accepted as type boolean."
+                }
+            } else if(headerObj.type.toLowerCase().trim() !== 'string') {
+                error = "parseFW: Specified DataType ('"+ headerObj.type +"') is neither string nor number nor boolean."
+            } else fValue = fieldStr;
+
+            if(!error) json[headerObj.fieldName.trim()] = fValue;  // fields are added to json as long as there are no errors. 
+        });                                                  // When a field encounters an error, adding that field and additional fields is stopped
+        payload = { json: json  };
+
+        if(options.modelAPI) payload.modelAPI = options.modelAPI;
+        if(options.method) payload.method = options.method;
+        if(options.httpHeaders) payload.headers = options.httpHeaders;
+        cb(payload, error);
     };
 
     return this;

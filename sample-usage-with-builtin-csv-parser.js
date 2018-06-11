@@ -6,9 +6,10 @@
  */
 /**
  * This sample usage file uses the batch-processing module and runs standalone with 
- * `node sample-usage2.js`  command.
+ * `node sample-usage-with-builtin-csv-parser.js`  command.
  * 
- * A built-in parser from the included parsers module is used to parse CSV data-file.
+ * The "Comma Separated Values" (CSV built-in parser from the included parsers module is used 
+ * to parse CSV data-file.
  * 
  * Make sure the oe-Cloud app is running at `options.appBaseURL` before running this script.
  * 
@@ -18,7 +19,7 @@
  * For authentication to the oeCloud app, `options.ctx` can either contain `username`, 
  * `password` and `tenantId` or it can contain just a valid `access_token`.
 
- * @file sample-usage.js
+ * @file sample-usage-with-builtin-csv-parser.js
  * @author Ajith Vasudevan
  */
 
@@ -63,6 +64,7 @@ var jobService = {                                         // Create a jobServic
 var batchProcessing = require(".");                        // Requiring the batch-processing module
 
 
-batchProcessing.processFile(filePath, options, jobService, function() {   // Calling the processFile(..) function to start processing the file
-    console.log("file "+ filePath +" processed successfully");
+batchProcessing.processFile(filePath, options, jobService, function(e) {   // Calling the processFile(..) function to start processing the file
+    if(!e) console.log("file "+ filePath +" processed successfully");
+    else console.error(e);
 });
