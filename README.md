@@ -1,5 +1,27 @@
 # Batch Processing
 
+## Installation and Quick Start
+To install, clone this project, change to the `batch-processing` directory, and run `npm install`.
+
+To try some samples, run - 
+
+```console
+node sample-usage-with-custom-parser.js          ## This sample demonstrates the usage with a custom parser
+
+node sample-usage-with-builtin-fw-parser.js      ## This sample demonstrates the usage with a builtin fixed width parser
+
+node sample-usage-with-builtin-csv-parser.js     ## This sample demonstrates the usage with a builtin csv parser
+
+```
+
+To run tests, run -
+
+```console
+npm test
+
+```
+
+
 ## Need
 There is a requirement in many applications to load data into the application database from flat (text) files. Such a data load should honor all application validations and rules supported by the application for the specific type of data being loaded. The data files may contain a large number of records, one record per line. A line is assumed to be terminated by a newline (\n) character.
 
