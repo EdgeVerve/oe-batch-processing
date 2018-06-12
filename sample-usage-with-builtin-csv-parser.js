@@ -36,7 +36,7 @@ var options = {                                                // Create a batch
         headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}          
     };
 
-var parserOpts = {
+var parserOptions = {                        // Create a parserOptions Object
 //    delimiter: ' ',                        // Optional. Default is ',' (comma)
     csvHeaders: ' key, value ',              // Mandatory. No. of csvHeaders (#csvHeaders) must be >= #data-fields. If #csvHeaders !== #data-fields, defaults to error. Whitespace is okay.
 //    csvHeaderDataTypes: 'string, number',  // Optional. Default is 'string,string,string,...' (all fields are considered as type string). #csvHeaderDataTypes must be >= #data-fields. If #csvHeaderDataTypes !== #data-fields, defaults to error. Whitespace is okay.
@@ -44,7 +44,7 @@ var parserOpts = {
     ignoreExtraHeaderDataTypes: true         // Optional. Default is false. If true, prevents error when #csvHeaderDataTypes > #data-fields 
 }    
 
-var csvParser = parsers.csvParser(parserOpts);             // Create a csvParser object by passing parserOpts
+var csvParser = parsers.csvParser(parserOptions);             // Create a csvParser object by passing parserOpts
 
 var jobService = {                                         // Create a jobService object
 

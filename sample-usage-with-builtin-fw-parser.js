@@ -34,14 +34,14 @@ var options = {                                                // Create a batch
         method: 'POST'
     };
 
-var parserOpts = {
+var parserOptions = {            // Create a parserOptions object
     fwHeaders: [
         { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5, justification: 'Left' },
-        { fieldName: 'value', type: 'boolean', length: 8, startPosition: 6, endPosition: 13, justification: 'Left' }
+        { fieldName: 'value', type: 'string', length: 8, startPosition: 6, endPosition: 13, justification: 'Left' }
     ]
 };    
 
-var fwParser = parsers.fwParser(parserOpts);             // Create a fwParser object by passing parserOpts
+var fwParser = parsers.fwParser(parserOptions);             // Create a fwParser object by passing parserOptions
 
 var jobService = {                                         // Create a jobService object
 
