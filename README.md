@@ -77,6 +77,13 @@ The `processFile(..)` function takes the following arguments, which need to be p
                         and this won't be logged.  
 
 
+* **cb** - A callback function with a single parameter, *e*. This function is normally called at the end of the file processing, if there are no *fatal* errors. 
+If there is a fatal error and file processing cannot proceed, then this callback is called with an error object as parameter. 
+The client can examine this error object to know what went wrong.
+**Note:** Record level errors such as field-header count mismatch, validation errors, etc., are not considered as *fatal* errors and such errors would not be 
+returned in this callback. These errors would be logged to the oeCloud application database (`BatchStatus`) and processing would proceed till all records are processed. 
+
+
 The `processFile(..)` function does the following in sequence -
 
 1. First, it calls `jobService.onStart() `
@@ -357,7 +364,7 @@ The *FW Parser* is configured by passing a `parserOptions` object to it with the
 
 |Config Property|Description|Default Value|Example|
 |--------|-----------|--------|--------|
-|fwHeaders|Mandatory. An array of objects, each object containing the metadata of a single field. The array should have as many elements as there are fields to parse in the data-file. Each object should have the following mandatory properties: `fieldName`, `type`, `startPosition`,`endPosition`| No default headers are provided.|```[{ fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5 }, { fieldName: 'value', type: 'boolean', length: 8, startPosition: 6, endPosition: 13 }]```|
+|fwHeaders|- Mandatory. An array of objects, each object containing the metadata of a single field. The array should have as many elements as there are fields to parse in the data-file. Each object should have the following mandatory properties: `fieldName`, `type`, `startPosition`,`endPosition`| No default headers are provided.|```[{ fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5 }, { fieldName: 'value', type: 'boolean', length: 8, startPosition: 6, endPosition: 13 }]```|
 
 
 
