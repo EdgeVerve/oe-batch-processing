@@ -77,8 +77,6 @@ The `processFile(..)` function takes the following arguments, which need to be p
     This function is implemented by the client, and it should have the logic to convert the record data (from file) sent to it via `recData.rec`
     to a valid JSON for posting to the *oc-Cloud* application.
     This function takes two parameters - *recData*, *cb* -
-    * **onEachResult** - a  (optional) function taking a single object as argument. This function is called after processing each record, passing the result of processing
-    the current record. This function is used to notify the client about the result of processing each record.
 
         * *recData* (object) - contains the details of the current record for processing. It has the following properties - *fileName*, *rec*, *recId* :
             * *fileName* (string) - Name of the file being processed
@@ -98,6 +96,16 @@ The `processFile(..)` function takes the following arguments, which need to be p
                         If both *payload* and *error* are `null`, then the current record will be ignored and no processing will be attempted, 
                         and this won't be logged.  
 
+    * **onEachResult** - a  (optional) function taking a single object as argument. This function is called after processing each record, passing the result of processing
+    the current record. This function is used to notify the client about the result of processing each record.
+    This function takes a single parameter - *result* -
+
+        * *result* (object) - contains the details and status of the current record that was processing. It has the following properties - *fileName*, *rec*, *recId* :
+            * *fileRecordData* (string) - Same as *recData* above
+            * *payload* (string) - Same as *Payload* above
+            * *statusText* (string) - A text message indicating the status of processing. Can be SUCCESS or FAILED 
+            * *error* (object/string) - Non-null is there was an error processing this record
+       
 
 * **cb** - A callback function with a single parameter, *e*. This function is normally called at the end of the file processing, if there are no *fatal* errors. 
 If there is a fatal error and file processing cannot proceed, then this callback is called with an error object as parameter. 
@@ -333,6 +341,8 @@ A sample usage of the *oe-Cloud batch-processing* module with *csv parser* is sh
 
 var batchProcessing = require('batch-processing');   // require the batch-processing module
 
+var parsers = require('./parsers');
+
 var filePath = 'test/testdata.txt';   // File to process
 
 var options = {                       // options object
@@ -396,6 +406,8 @@ A sample usage of the *oe-Cloud batch-processing* module with *fw parser* is sho
 ```javascript
 
 var batchProcessing = require('batch-processing');   // require the batch-processing module
+
+var parsers = require('./parsers');
 
 var filePath = 'test/testdata.txt';   // File to process
 
