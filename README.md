@@ -341,6 +341,8 @@ A sample usage of the *oe-Cloud batch-processing* module with *csv parser* is sh
 
 var batchProcessing = require('batch-processing');   // require the batch-processing module
 
+var parsers = require('./parsers');
+
 var filePath = 'test/testdata.txt';   // File to process
 
 var options = {                       // options object
@@ -404,6 +406,8 @@ A sample usage of the *oe-Cloud batch-processing* module with *fw parser* is sho
 ```javascript
 
 var batchProcessing = require('batch-processing');   // require the batch-processing module
+
+var parsers = require('./parsers');
 
 var filePath = 'test/testdata.txt';   // File to process
 
