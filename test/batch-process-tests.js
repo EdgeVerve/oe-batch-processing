@@ -306,8 +306,8 @@ describe("batch-processing-tests", function () {
 
         parserOpts = {
             fwHeaders: [
-                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5, justification: 'Left' },
-                { fieldName: 'value', type: 'boolean', length: 8, startPosition: 6, endPosition: 13, justification: 'Left' }
+                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5 },
+                { fieldName: 'value', type: 'boolean', length: 8, startPosition: 6, endPosition: 13 }
             ]
         };
 
@@ -326,8 +326,8 @@ describe("batch-processing-tests", function () {
 
         parserOpts = {
             fwHeaders: [
-                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5, justification: 'Left' },
-                { fieldName: 'value', type: 'string', length: 8, startPosition: 6, endPosition: 15, justification: 'Left' }   // record-length (13) < max-endPosition (15) 
+                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5 },
+                { fieldName: 'value', type: 'string', length: 8, startPosition: 6, endPosition: 15 }   // record-length (13) < max-endPosition (15) 
             ]
         };
 
@@ -345,8 +345,8 @@ describe("batch-processing-tests", function () {
 
         parserOpts = {
             fwHeaders: [
-                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5, justification: 'Left' },
-                { fieldName: 'value', type: 'string', length: 8, startPosition: 6, endPosition: 11, justification: 'Left' }   // record-length (13) > max-endPosition (11) 
+                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5 },
+                { fieldName: 'value', type: 'string', length: 8, startPosition: 6, endPosition: 11 }   // record-length (13) > max-endPosition (11) 
             ]
         };
 
@@ -364,8 +364,8 @@ describe("batch-processing-tests", function () {
 
         parserOpts = {
             fwHeaders: [
-                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5, justification: 'Left' },
-                { fieldName: 'value', type: 'number', length: 8, startPosition: 6, endPosition: 13, justification: 'Left' }   // wrong type: number 
+                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5 },
+                { fieldName: 'value', type: 'number', length: 8, startPosition: 6, endPosition: 13 }   // wrong type: number 
             ]
         };
 
@@ -383,8 +383,8 @@ describe("batch-processing-tests", function () {
 
         parserOpts = {
             fwHeaders: [
-                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5, justification: 'Left' },   
-                { type: 'string', length: 8, startPosition: 6, endPosition: 13, justification: 'Left' }                       // missing fieldName 
+                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5 },   
+                { type: 'string', length: 8, startPosition: 6, endPosition: 13 }                       // missing fieldName 
             ]
         };
 
@@ -403,8 +403,8 @@ describe("batch-processing-tests", function () {
 
         parserOpts = {
             fwHeaders: [
-                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5, justification: 'Left' },   
-                { fieldName: 'value', length: 8, startPosition: 6, endPosition: 13, justification: 'Left' }                    // missing type 
+                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5 },   
+                { fieldName: 'value', length: 8, startPosition: 6, endPosition: 13 }                    // missing type 
             ]
         };
 
@@ -423,8 +423,8 @@ describe("batch-processing-tests", function () {
 
         parserOpts = {
             fwHeaders: [
-                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5, justification: 'Left' },
-                { fieldName: 'value', type: 'string', length: 8, endPosition: 13, justification: 'Left' }          // missing startPosition 
+                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5 },
+                { fieldName: 'value', type: 'string', length: 8, endPosition: 13 }          // missing startPosition 
             ]
         };
 
@@ -442,8 +442,8 @@ describe("batch-processing-tests", function () {
 
         parserOpts = {
             fwHeaders: [
-                { fieldName: 'key', type: 'string', length: 5, startPosition: 1, justification: 'Left' },             // missing endPosition 
-                { fieldName: 'value', type: 'string', length: 8, startPosition: 6, endPosition: 13, justification: 'Left' }   
+                { fieldName: 'key', type: 'string', length: 5, startPosition: 1 },             // missing endPosition 
+                { fieldName: 'value', type: 'string', length: 8, startPosition: 6, endPosition: 13 }   
             ]
         };
 

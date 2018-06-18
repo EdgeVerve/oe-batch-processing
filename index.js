@@ -30,6 +30,13 @@
  * @author Ajith Vasudevan
  */
 
+// try {
+//     var memwatch = require('memwatch-next');
+//     memwatch.on('leak', function(info) { console.log("MEMORY_INFO", info); });
+//     memwatch.on('stats', function(stats) {console.log("MEMORY_STATS", stats); });
+// } catch(e) {console.log('\n\n'); console.log(e && e.message ? e.message : e); console.log('\nMemory Profiling will not be performed\n\n');}
+
+
 var log, uuidv4, LineByLineReader, Bottleneck, request;
 if(!process.env["LOGGER_CONFIG"] && process.env["BATCH_LOGGER_CONFIG"]) {
     process.env["LOGGER_CONFIG"] = JSON.stringify({"levels":{"default":process.env["BATCH_LOGGER_CONFIG"].trim().toLocaleLowerCase()}});
@@ -46,6 +53,8 @@ try {
     // Module that manages the rate-limiting or throttling of the file processing
     Bottleneck = require("bottleneck");
 } catch(e) {console.log('\n\n'); console.log(e && e.message ? e.message : e); console.log('\nHave you run `npm install`?\n\n'); process.exit(1);}
+
+
 
 var batchRunInserted = false; 
 var onEndCalled = false;
@@ -91,13 +100,13 @@ var limiter;
 var BATCH_RESULT_LOG_ITEMS = process.env["BATCH_RESULT_LOG_ITEMS"] || (config && config.batchResultLogItems) || "";
 if(require.main !== module) log.info("BATCH_RESULT_LOG_ITEMS = " + BATCH_RESULT_LOG_ITEMS);
 
-// Maximum number of jobs tat can be queued before pausing the file reading
+// Maximum number of jobs that can be queued before pausing the file reading
 var MAX_QUEUE_SIZE = process.env["MAX_QUEUE_SIZE"] ? Number(process.env["MAX_QUEUE_SIZE"]) : (config && config.maxQueueSize) || 50000;
 if(require.main !== module) log.info("MAX_QUEUE_SIZE = " + MAX_QUEUE_SIZE);
 
 var appBaseURL, access_token, batchRunId, batchRunVersion, totalRecordCount = 0, successCount = 0, failureCount = 0, s;
 var eof = false;  // Flag that changes state when the file is completely read
-
+var lr;           // Line by line reader
 
 //5
 /**
@@ -210,7 +219,10 @@ function processFile(filePath, options, jobService, cb) {
                 updateBatchRun(undefined, function() {
                     cb(); 
                 });
-                console.log("************* PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (endTime - startTime)/1000 + " sec. Limiter Stats: " + JSON.stringify(limiter.counts()) + " *************");
+                process.stdout.write("- PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (endTime - startTime)/1000 + " sec. Limiter Stats: " + JSON.stringify(limiter.counts()) + "  ");
+                var mem = process.memoryUsage();
+                for (let key in mem) process.stdout.write(`${key}:${Math.round(mem[key] / 1024 / 1024 * 100) / 100} MB `); 
+                console.log('');
                 clearInterval(progressInterval);
 
                 var end = new Date().getTime();
@@ -287,7 +299,11 @@ function processFile(filePath, options, jobService, cb) {
                         var PROGRESS_INTERVAL = (process.env['PROGRESS_INTERVAL'] ? Number(process.env['PROGRESS_INTERVAL']) : (config.progressInterval || 10000));
                         // Show progress at regular intervals
                         progressInterval = setInterval(function() {
-                            console.log("************* PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (++pCount) * PROGRESS_INTERVAL/1000 + " sec. Limiter Stats: " + JSON.stringify(limiter.counts()) + " *************");
+                            
+                            process.stdout.write("- PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (++pCount) * PROGRESS_INTERVAL/1000 + " sec. Limiter Stats: " + JSON.stringify(limiter.counts()) + "  ");
+                            var mem = process.memoryUsage();
+                            for (let key in mem) process.stdout.write(`${key}:${Math.round(mem[key] / 1024 / 1024 * 100) / 100} MB `); 
+                            console.log('');
                         }, PROGRESS_INTERVAL);
 
                         // Read the specified file, ...
@@ -374,6 +390,7 @@ function processFile(filePath, options, jobService, cb) {
                             updateBatchRun(errMsg, function() { 
                             });
                             clearInterval(progressInterval);
+                            lr.close();
                             cb(err);
                         });
                         lr.on('end', function(){  // handle end of file
@@ -435,7 +452,7 @@ function getAccessToken(options, cb) {
             method: "POST",
             body: {username: options.ctx.username, password: options.ctx.password},
             json: true,
-            timeout: 10000,
+            timeout: 30000,
             headers: {
                 'Cookie': 'Content-Type=application/json; charset=encoding; Accept=application/json',
                 'tenant-id': options.ctx.tenantId
