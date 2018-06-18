@@ -1,5 +1,27 @@
 # Batch Processing
 
+## Installation and Quick Start
+To install, clone this project, change to the `batch-processing` directory, and run `npm install`.
+
+To try some samples, run - 
+
+```console
+node sample-usage-with-custom-parser.js          ## This sample demonstrates the usage with a custom parser
+
+node sample-usage-with-builtin-fw-parser.js      ## This sample demonstrates the usage with a builtin fixed width parser
+
+node sample-usage-with-builtin-csv-parser.js     ## This sample demonstrates the usage with a builtin csv parser
+
+```
+
+To run tests, run -
+
+```console
+npm test
+
+```
+
+
 ## Need
 There is a requirement in many applications to load data into the application database from flat (text) files. Such a data load should honor all application validations and rules supported by the application for the specific type of data being loaded. The data files may contain a large number of records, one record per line. A line is assumed to be terminated by a newline (\n) character.
 
@@ -75,6 +97,13 @@ The `processFile(..)` function takes the following arguments, which need to be p
                         This is assumed to be non-null when a *payload* could not be sent due to some error, and this fact/error needs to be logged. 
                         If both *payload* and *error* are `null`, then the current record will be ignored and no processing will be attempted, 
                         and this won't be logged.  
+
+
+* **cb** - A callback function with a single parameter, *e*. This function is normally called at the end of the file processing, if there are no *fatal* errors. 
+If there is a fatal error and file processing cannot proceed, then this callback is called with an error object as parameter. 
+The client can examine this error object to know what went wrong.
+**Note:** Record level errors such as field-header count mismatch, validation errors, etc., are not considered as *fatal* errors and such errors would not be 
+returned in this callback. These errors would be logged to the oeCloud application database (`BatchStatus`) and processing would proceed till all records are processed. 
 
 
 The `processFile(..)` function does the following in sequence -
@@ -357,7 +386,7 @@ The *FW Parser* is configured by passing a `parserOptions` object to it with the
 
 |Config Property|Description|Default Value|Example|
 |--------|-----------|--------|--------|
-|fwHeaders|Mandatory. An array of objects, each object containing the metadata of a single field. The array should have as many elements as there are fields to parse in the data-file. Each object should have the following mandatory properties: `fieldName`, `type`, `startPosition`,`endPosition`| No default headers are provided.|```[{ fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5 }, { fieldName: 'value', type: 'boolean', length: 8, startPosition: 6, endPosition: 13 }]```|
+|fwHeaders|- Mandatory. An array of objects, each object containing the metadata of a single field. The array should have as many elements as there are fields to parse in the data-file. Each object should have the following mandatory properties: `fieldName`, `type`, `startPosition`,`endPosition`| No default headers are provided.|```[{ fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5 }, { fieldName: 'value', type: 'boolean', length: 8, startPosition: 6, endPosition: 13 }]```|
 
 
 
