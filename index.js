@@ -126,8 +126,8 @@ var lr;           // Line by line reader
  *              * @property {function} onStart - a function taking a single callback function as a parameter. (optional) 
  *              * @property {function} onEnd   - a function taking a single callback function as a parameter. (optional)
  *              * @property {function} onEachRecord - a function taking two parameters - recData (object), cb (callback function). This is mandatory.
- *              * @property {function} onEachResult - a function taking a single parameter - result (object). This is optional.
- * @param {function} cb - callback function - gets called when all processing is finished                     
+ *              * @property {function} onEachResult - a function taking a single parameter - result (object). The result structure is as folows: {fileRecordData: recData, payload: payload, statusText: "FAILED", error: err };
+ * @param {function} cb - callback function - gets called when all processing is finished. If an error occurs, cb is called with a non-null error object.                     
  */ 
 function processFile(filePath, options, jobService, cb) {
     var start = new Date().getTime();       // For logging
