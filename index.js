@@ -30,13 +30,6 @@ Any unauthorized reproduction, storage, transmission in any form or by any means
  * @author Ajith Vasudevan
  */
 
-// try {
-//     var memwatch = require('memwatch-next');
-//     memwatch.on('leak', function(info) { console.log("MEMORY_INFO", info); });
-//     memwatch.on('stats', function(stats) {console.log("MEMORY_STATS", stats); });
-// } catch(e) {console.log('\n\n'); console.log(e && e.message ? e.message : e); console.log('\nMemory Profiling will not be performed\n\n');}
-
-
 var log, uuidv4, LineByLineReader, Bottleneck, request;
 if(!process.env["LOGGER_CONFIG"] && process.env["BATCH_LOGGER_CONFIG"]) {
     process.env["LOGGER_CONFIG"] = JSON.stringify({"levels":{"default":process.env["BATCH_LOGGER_CONFIG"].trim().toLocaleLowerCase()}});
