@@ -1,7 +1,7 @@
 # Batch Processing
 
 ## Installation and Quick Start
-To install, clone this project, change to the `batch-processing` directory, and run `npm install`.
+To install, clone this project, change to the `oe-batch-processing` directory, and run `npm install`.
 
 To try some samples, run - 
 
@@ -44,7 +44,7 @@ as the batch run summary are persisted into the *oc-Cloud* application for audit
 
 ## Implementation
 
-The *oe-Cloud batch-processing* module is available at http://evgit/oecloud.io/batch-processing. 
+The *oe-Cloud batch-processing* module is available at http://evgit/oecloud.io/oe-batch-processing. 
 
 This module exports a `processFile ( filePath, options, jobService, cb )` function - to be called by a batch client who wishes to start a batch job. 
 The function processes each record in the file and saves the result of each record insert/update into a *oc-Cloud* model called `BatchStatus`.
@@ -169,7 +169,7 @@ A sample usage of the *oe-Cloud batch-processing* module with *custom parser* is
 
 ```javascript
 
-var batchProcessing = require('batch-processing');   // require the batch-processing module
+var batchProcessing = require('oe-batch-processing');   // require the batch-processing module
 
 var filePath = 'test/testdata.txt';   // File to process
 
@@ -339,7 +339,7 @@ A sample usage of the *oe-Cloud batch-processing* module with *csv parser* is sh
 
 ```javascript
 
-var batchProcessing = require('batch-processing');   // require the batch-processing module
+var batchProcessing = require('oe-batch-processing');   // require the batch-processing module
 
 var parsers = require('./parsers');
 
@@ -405,7 +405,7 @@ A sample usage of the *oe-Cloud batch-processing* module with *fw parser* is sho
 
 ```javascript
 
-var batchProcessing = require('batch-processing');   // require the batch-processing module
+var batchProcessing = require('oe-batch-processing');   // require the batch-processing module
 
 var parsers = require('./parsers');
 
