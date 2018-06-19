@@ -23,8 +23,7 @@ Any unauthorized reproduction, storage, transmission in any form or by any means
  */
 
 
-//var filePath = "test/batch-100.txt";         // The file to be processed
-var filePath = "D:/100mil.txt";
+var filePath = "test/batch-100.txt";         // The file to be processed
 var options = {                              // Create a batch-processing options object
 
         //ctx: {access_token: "P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx"},  
