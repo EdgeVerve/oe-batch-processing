@@ -28,8 +28,8 @@ var parsers = require('./parsers');
 //var filePath = "test/1k.txt";
 var filePath = "test/batch-100.csv";                           // The file to be processed
 var options = {                                                // Create a batch-processing options object
-        //ctx: {access_token: "P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx"},
-        ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},
+        ctx: {access_token: "P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx"},
+        //ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},
         appBaseURL: 'http://localhost:3000',
         modelAPI: '/api/Literals',
         method: 'POST',
