@@ -290,14 +290,16 @@ function processFile(filePath, options, jobService, cb) {
                         jobService.options = options;
                         var lineNr = 0;
                         var PROGRESS_INTERVAL = (process.env['PROGRESS_INTERVAL'] ? Number(process.env['PROGRESS_INTERVAL']) : (config.progressInterval || 10000));
-                        // Show progress at regular intervals
-                        progressInterval = setInterval(function() {
-                            
-                            process.stdout.write("- PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (++pCount) * PROGRESS_INTERVAL/1000 + " sec. Limiter Stats: " + JSON.stringify(limiter.counts()) + "  ");
-                            var mem = process.memoryUsage();
-                            for (let key in mem) process.stdout.write(`${key}:${Math.round(mem[key] / 1024 / 1024 * 100) / 100} MB `); 
-                            console.log('');
-                        }, PROGRESS_INTERVAL);
+                        if(PROGRESS_INTERVAL !== 0) {
+                            // Show progress at regular intervals
+                            progressInterval = setInterval(function() {
+                                
+                                process.stdout.write("- PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (++pCount) * PROGRESS_INTERVAL/1000 + " sec. Limiter Stats: " + JSON.stringify(limiter.counts()) + "  ");
+                                var mem = process.memoryUsage();
+                                for (let key in mem) process.stdout.write(`${key}:${Math.round(mem[key] / 1024 / 1024 * 100) / 100} MB `); 
+                                console.log('');
+                            }, PROGRESS_INTERVAL);
+                        }
 
                         // Read the specified file, ...
                         lr = new LineByLineReader(filePath);
