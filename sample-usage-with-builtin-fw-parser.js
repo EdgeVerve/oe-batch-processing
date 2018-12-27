@@ -27,8 +27,8 @@ var parsers = require('./parsers');
 
 var filePath = "test/fwbatch-100.fwv";                          // The file to be processed
 var options = {                                                // Create a batch-processing options object
-        //ctx: {access_token: "P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx"},
-        ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},
+        ctx: {access_token: "P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx"},
+        //ctx: {username: 'judith', p a s s w o r d: 'Edge@2017$', tenantId: 'demoTenant'},         // Please rectify the property with spaces in it
         appBaseURL: 'http://localhost:3000',
         modelAPI: '/api/Literals',
         method: 'POST'

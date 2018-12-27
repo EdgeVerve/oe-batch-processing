@@ -1,6 +1,23 @@
-# Batch Processing
+# Table of Contents
+- [Installation and Quick Start](#Installation and Quick Start)
+- [Need](#Need)
+- [Solution](#Solution)
+- [Implementation](#Implementation)
+- [Configuration](#Configuration)
+    - [Sample BatchStatus record](#Sample BatchStatus record)
+    - [Sample BatchRun record](#Sample BatchRun record)
+- [Builtin Parsers](#Builtin Parsers)
+    - [CSV Parser](#CSV Parser)
+        - [CSV Parser Options](#CSV Parser Options)
+        - [Sample Usage - CSV Parser](#Sample Usage - CSV Parser)
+    - [FW Parser](#FW Parser)
+        - [FW Parser Options](#FW Parser Options)
+        - [Sample Usage - FW Parser](#Sample Usage - FW Parser)
 
-## Installation and Quick Start
+
+
+<a name="Installation and Quick Start"></a>
+# Installation and Quick Start
 To install, clone this project, change to the `oe-batch-processing` directory, and run `npm install`.
 
 To try some samples, run - 
@@ -21,11 +38,12 @@ npm test
 
 ```
 
-
-## Need
+<a name="Need"></a>
+# Need
 There is a requirement in many applications to load data into the application database from flat (text) files. Such a data load should honor all application validations and rules supported by the application for the specific type of data being loaded. The data files may contain a large number of records, one record per line. A line is assumed to be terminated by a newline (\n) character.
 
-## Solution
+<a name="Solution"></a>
+# Solution
 
 Since file reading and processing is very processor intensive, the *batch-processing* module is kept separate from the *oe-Cloud* application, and it is run in a separate *NodeJS* VM. 
 This also means that the *batch-processing* module can be scaled separately.
@@ -42,7 +60,8 @@ It can be "required" and its main function called by anyone (for e.g., by a batc
 who wishes to start a batch job for processing a file containing text data, one record per line. Status of each record that is processed, as well
 as the batch run summary are persisted into the *oc-Cloud* application for audit / recovery / analysis purposes.
 
-## Implementation
+<a name="Implementation"></a>
+# Implementation
 
 The *oe-Cloud batch-processing* module is available at http://evgit/oecloud.io/oe-batch-processing. 
 
@@ -128,8 +147,8 @@ The `processFile(..)` function does the following in sequence -
 10. After all records are processed, the `jobService.onEnd()` function is called
 11. Updates `BatchRun` model with statistics of the run
 
-
-## Configuration
+<a name="Configuration"></a>
+# Configuration
 
 The *oe-Cloud batch-processing* module can be configured usind a `config.json` file at the root of the module. This config file has the following structure:
 
@@ -163,7 +182,7 @@ A few other configurations are as follows:
 |environment variable `BATCH_LOGGER_CONFIG`|Sets log level to one of *trace*, *debug*, *warn*, *error*, or *info*, if oe-Cloud's LOGGER_CONFIG is not set|
 |environment variable `ACCESS_TOKEN`|Overrides `access_token` that may be set in `options.ctx`. `ACCESS_TOKEN` in environment variable also supercedes any user credentials supplied in `options.ctx`.|
 
-
+<a name="Sample Usage - Custom Parser"></a>
 ## Sample Usage - Custom Parser
 A sample usage of the *oe-Cloud batch-processing* module with *custom parser* is shown below:
 
@@ -212,7 +231,7 @@ batchProcessing.processFile(filePath, options, jobService, function(e) {   // Ca
 
 ```
 
-
+<a name="Sample BatchStatus record"></a>
 ### Sample BatchStatus record
 The above code (`processFile()` function) inserts one record for every file-record processed into the *oe-Cloud* `BatchStatus` model. Shown below is a sample record from the `BatchStatus` model.
 
@@ -271,7 +290,7 @@ The above code (`processFile()` function) inserts one record for every file-reco
 ```
 
 
-
+<a name="Sample BatchRun record"></a>
 ### Sample BatchRun record
 A run of the `processFile()` function also inserts a summary record (one record for the complete run, which is for one data-file) into the *oe-Cloud* `BatchRun` model. 
 Shown below is a sample record from the `BatchRun` model.
@@ -308,8 +327,8 @@ Shown below is a sample record from the `BatchRun` model.
 }
 ```
 
-
-# Builtin Parsers
+<a name="Builtin Parsers"></a>
+## Builtin Parsers
 The *oe-Cloud batch-processing* module includes the following parsers which can be used OTB with minimal configuration:
 * CSV Parser
 * FW (Fixed Width) Parser
@@ -317,11 +336,13 @@ The *oe-Cloud batch-processing* module includes the following parsers which can 
 These Parsers provide the ``onEachRecord`` function that needs to be part of the ``jobService`` object, which in turn is passed to the ``processFile`` function. 
 (See sample usage above to understand how these objects and functions are used)
 
+<a name="CSV Parser"></a>
 ## CSV Parser
 - The **CSV Parser** can be used to parse CSV (Comma Separated Value) data files, and also other delimited files by appropriately configuring the parser.
 - While parsing CSV, the comma (,) is allowed within data fields, provided such data fields are enclosed within double-quotes. 
 - The delimiter cannot be part of the data in case of non-CSV delimited files.
 
+<a name="CSV Parser Options"></a>
 ### CSV Parser Options
 The *CSV Parser* is configured by passing a `parserOptions` object to it with the following properties
 
@@ -333,8 +354,8 @@ The *CSV Parser* is configured by passing a `parserOptions` object to it with th
 |ignoreExtraHeaders|Optional. A boolean flag, if set to true, ignores the case where there are more headers specified than the number of fields in the data file|false|false|
 |ignoreExtraHeaderDataTypes|Optional. A boolean flag, if set to true, ignores the case where there are more header-data-types specified than the number of fields in the data file|false|false|
 
-
-## Sample Usage - CSV Parser
+<a name="Sample Usage - CSV Parser"></a>
+### Sample Usage - CSV Parser
 A sample usage of the *oe-Cloud batch-processing* module with *csv parser* is shown below:
 
 ```javascript
@@ -386,11 +407,11 @@ batchProcessing.processFile(filePath, options, jobService, function(e) {   // Ca
 
 ```
 
-
+<a name="FW Parser"></a>
 ## FW Parser
 - The **FW Parser** can be used to parse FW (Fixed Width) data files by appropriately configuring the parser.
 
-
+<a name="FW Parser Options"></a>
 ### FW Parser Options
 The *FW Parser* is configured by passing a `parserOptions` object to it with the following properties
 
@@ -399,8 +420,8 @@ The *FW Parser* is configured by passing a `parserOptions` object to it with the
 |fwHeaders|- Mandatory. An array of objects, each object containing the metadata of a single field. The array should have as many elements as there are fields to parse in the data-file. Each object should have the following mandatory properties: `fieldName`, `type`, `startPosition`,`endPosition`| No default headers are provided.|```[{ fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5 }, { fieldName: 'value', type: 'boolean', length: 8, startPosition: 6, endPosition: 13 }]```|
 
 
-
-## Sample Usage - FW Parser
+<a name="Sample Usage - FW Parser"></a>
+### Sample Usage - FW Parser
 A sample usage of the *oe-Cloud batch-processing* module with *fw parser* is shown below:
 
 ```javascript
