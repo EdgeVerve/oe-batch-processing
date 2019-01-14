@@ -20,7 +20,7 @@
 # Installation and Quick Start
 To install, clone this project, change to the `oe-batch-processing` directory, and run `npm install`.
 
-To try some samples, run - 
+To try some samples, run -
 
 ```console
 node sample-usage-with-custom-parser.js          ## This sample demonstrates the usage with a custom parser
@@ -45,9 +45,9 @@ There is a requirement in many applications to load data into the application da
 <a name="Solution"></a>
 # Solution
 
-Since file reading and processing is very processor intensive, the *batch-processing* module is kept separate from the *oe-Cloud* application, and it is run in a separate *NodeJS* VM. 
+Since file reading and processing is very processor intensive, the *batch-processing* module is kept separate from the *oe-Cloud* application, and it is run in a separate *NodeJS* VM.
 This also means that the *batch-processing* module can be scaled separately.
-The module uses http REST API of the *oe-Cloud* application to load the data into the application database. 
+The module uses http REST API of the *oe-Cloud* application to load the data into the application database.
 
 This ensures that -
 
@@ -55,17 +55,17 @@ This ensures that -
 1. all business validations and rules are applied for each record during the insert/update
 2. the application processing is load-balanced automatically, taking advantage of the application's infrastructure.
 
-Considering the above, the *oc-Cloud* batch-processing solution is built as a separate nodejs module (not included in the *oc-Cloud* framework). 
-It can be "required" and its main function called by anyone (for e.g., by a batch client, or a batch scheduler or Node-RED, etc.,) 
+Considering the above, the *oc-Cloud* batch-processing solution is built as a separate nodejs module (not included in the *oc-Cloud* framework).
+It can be "required" and its main function called by anyone (for e.g., by a batch client, or a batch scheduler or Node-RED, etc.,)
 who wishes to start a batch job for processing a file containing text data, one record per line. Status of each record that is processed, as well
 as the batch run summary are persisted into the *oc-Cloud* application for audit / recovery / analysis purposes.
 
 <a name="Implementation"></a>
 # Implementation
 
-The *oe-Cloud batch-processing* module is available at http://evgit/oecloud.io/oe-batch-processing. 
+The *oe-Cloud batch-processing* module is available at https://github.com/EdgeVerve/oe-batch-processing.
 
-This module exports a `processFile ( filePath, options, jobService, cb )` function - to be called by a batch client who wishes to start a batch job. 
+This module exports a `processFile ( filePath, options, jobService, cb )` function - to be called by a batch client who wishes to start a batch job.
 The function processes each record in the file and saves the result of each record insert/update into a *oc-Cloud* model called `BatchStatus`.
 At the end of the file processing, it saves the summary of the batch processing into another *oc-Cloud* model called `BatchRun`
 
@@ -78,21 +78,21 @@ The `processFile(..)` function takes the following arguments, which need to be p
 
     * *ctx* - Object containing `username`, `password`, `tenantId`, `access_token`. User credentials (`username`, `password`, `tenantId`) supercede `access_token`.
     i.e., `access_token` is ignored if `username` is present. Both `access_token` (in options.ctx) and user credentials (`username`, `password`, `tenantId`) are overridden by the environment variable `ACCESS_TOKEN`.
-   
+
     * *appBaseURL* - URL of *oc-Cloud* application where data will be posted, e.g., 'http://localhost:3000' This is overridden if *appBaseURL* is specified in `payload` (see below)
-   
+
     * *modelAPI* - API of Model where file data will be posted, e.g., '/api/Literals' (optional, can also be specified via payload). This is overridden if *modelAPI* is specified in `payload` (see below)
-   
+
     * *method* - HTTP method to be used for the processing - 'POST' / 'PUT' / 'GET' or 'DELETE'. This is overridden if *method* is specified in `payload` (see below)
-   
+
     * *headers* - additional headers, if any, that need to be passed while making the request (optional). This is overridden if *headers* is specified in `payload` (see below)
 
 
 * **jobService** - object containing the following properties:
- 
-    * **onStart** - a (optional) function taking a single callback function as a parameter. This function is called before starting the processing of the file. May be used for verifying checksum, etc., It can fetch batchJob details  such as concurrency and store in the context. 
+
+    * **onStart** - a (optional) function taking a single callback function as a parameter. This function is called before starting the processing of the file. May be used for verifying checksum, etc., It can fetch batchJob details  such as concurrency and store in the context.
     * **onEnd**   - a  (optional) function taking a single callback function as a parameter. This function is called after all file records have been processed may be used to notify the client about the end status of the batch job.
-    * **onEachRecord** - a (mandatory) function which is called for each record in the file to be processed. 
+    * **onEachRecord** - a (mandatory) function which is called for each record in the file to be processed.
     This function is implemented by the client, and it should have the logic to convert the record data (from file) sent to it via `recData.rec`
     to a valid JSON for posting to the *oc-Cloud* application.
     This function takes two parameters - *recData*, *cb* -
@@ -100,20 +100,20 @@ The `processFile(..)` function takes the following arguments, which need to be p
         * *recData* (object) - contains the details of the current record for processing. It has the following properties - *fileName*, *rec*, *recId* :
             * *fileName* (string) - Name of the file being processed
             * *rec* (string) - The current line from the file, for processing
-            * *recId* (number) - The line number (in the file) of the current line 
-        * *cb* (function) - this callback function takes two arguments - *payload* and *error*. 
+            * *recId* (number) - The line number (in the file) of the current line
+        * *cb* (function) - this callback function takes two arguments - *payload* and *error*.
 
             * *Payload* (object) consists of the folowing properties:
-            
+
                 * *json* (object)     - A JSON representation of the file record (recData.rec) suitable for POSTing to the *oc-Cloud* application.
                 * *modelAPI* (string) - The *oc-Cloud* REST API to which the data needs to be POSTed, e.g., '/api/Literals'. This overrides *modelAPI* if specified in options (see above)
-                * *method* (string)   - The http verb to be used for calling the modelAPI, e.g., 'POST' / 'PUT'. This overrides *method* if specified in options (see above) 
+                * *method* (string)   - The http verb to be used for calling the modelAPI, e.g., 'POST' / 'PUT'. This overrides *method* if specified in options (see above)
                 * *headers* (object)  - optional request headers to be added while calling modelAPI. This overrides *headers* if specified in options (see above)
-                
-            * *error* (object / string) - Error object or message. This should normally be null when there is a valid payload. 
-                        This is assumed to be non-null when a *payload* could not be sent due to some error, and this fact/error needs to be logged. 
-                        If both *payload* and *error* are `null`, then the current record will be ignored and no processing will be attempted, 
-                        and this won't be logged.  
+
+            * *error* (object / string) - Error object or message. This should normally be null when there is a valid payload.
+                        This is assumed to be non-null when a *payload* could not be sent due to some error, and this fact/error needs to be logged.
+                        If both *payload* and *error* are `null`, then the current record will be ignored and no processing will be attempted,
+                        and this won't be logged.
 
     * **onEachResult** - a  (optional) function taking a single object as argument. This function is called after processing each record, passing the result of processing
     the current record. This function is used to notify the client about the result of processing each record.
@@ -122,15 +122,15 @@ The `processFile(..)` function takes the following arguments, which need to be p
         * *result* (object) - contains the details and status of the current record that was processing. It has the following properties - *fileName*, *rec*, *recId* :
             * *fileRecordData* (string) - Same as *recData* above
             * *payload* (string) - Same as *Payload* above
-            * *statusText* (string) - A text message indicating the status of processing. Can be SUCCESS or FAILED 
+            * *statusText* (string) - A text message indicating the status of processing. Can be SUCCESS or FAILED
             * *error* (object/string) - Non-null is there was an error processing this record
-       
 
-* **cb** - A callback function with a single parameter, *e*. This function is normally called at the end of the file processing, if there are no *fatal* errors. 
-If there is a fatal error and file processing cannot proceed, then this callback is called with an error object as parameter. 
+
+* **cb** - A callback function with a single parameter, *e*. This function is normally called at the end of the file processing, if there are no *fatal* errors.
+If there is a fatal error and file processing cannot proceed, then this callback is called with an error object as parameter.
 The client can examine this error object to know what went wrong.
-**Note:** Record level errors such as field-header count mismatch, validation errors, etc., are not considered as *fatal* errors and such errors would not be 
-returned in this callback. These errors would be logged to the oeCloud application database (`BatchStatus`) and processing would proceed till all records are processed. 
+**Note:** Record level errors such as field-header count mismatch, validation errors, etc., are not considered as *fatal* errors and such errors would not be
+returned in this callback. These errors would be logged to the oeCloud application database (`BatchStatus`) and processing would proceed till all records are processed.
 
 
 The `processFile(..)` function does the following in sequence -
@@ -139,11 +139,11 @@ The `processFile(..)` function does the following in sequence -
 2. Gets `access_token`
 3. Creates a record in `BatchRun` model for the current run with the data passed to `processFile(..) `
 4. Reads the file, and queue the `runJob(..)` function with parameters `jobService` and `recData`, once for each record in the file
-5. Now, the queue is processed by executing the `runJob(..)` function with its arguments in a parallel, but rate-limited/throttled manner. 
-6. Inside the `runJob(..)` function, `jobService.onEachRecord(..)` is called to obtain the JSON representation of `recData.rec` and api details 
+5. Now, the queue is processed by executing the `runJob(..)` function with its arguments in a parallel, but rate-limited/throttled manner.
+6. Inside the `runJob(..)` function, `jobService.onEachRecord(..)` is called to obtain the JSON representation of `recData.rec` and api details
 7. The *oc-Cloud* API is called and the result is logged to the `BatchStatus` model via a separate API call.
 8. The  `jobService.onEachResult(..)` functtion is called with the result of record processing as argument
-9. Steps 6-8 is repeated till the queue is completely processed. 
+9. Steps 6-8 is repeated till the queue is completely processed.
 10. After all records are processed, the `jobService.onEnd()` function is called
 11. Updates `BatchRun` model with statistics of the run
 
@@ -154,7 +154,7 @@ The *oe-Cloud batch-processing* module can be configured usind a `config.json` f
 
 ```json
 {
-    "maxConcurrent": 80, 
+    "maxConcurrent": 80,
     "minTime": 20,
     "batchResultLogItems": "",
     "appBaseURL": "http://localhost:3000"
@@ -198,17 +198,17 @@ var options = {                       // options object
         appBaseURL: 'http://localhost:3000',                                                            // ignored if appBaseURL is present in payload
         modelAPI: '/api/Literals',                                                                      // ignored if modelAPI is present in payload
         method: 'POST',                                                                                 // ignored if method is present in payload
-        headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}  // ignored if headers is present in payload      
+        headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}  // ignored if headers is present in payload
     };
 
 var jobService = {
 
     onStart: function (cb) { cb({}); },            // onStart is optional
-    
+
     onEnd: function (cb) { cb(); },                // onEnd is optional
-    
+
     onEachRecord: function (recData, cb) {         // onEachRecord is mandatory
-    
+
         var json = {'key': recData.rec.split(' ')[0], 'value': recData.rec.split(' ')[1]};  // logic to convert file record (string) to *oc-Cloud* processable object
 
         var payload = {
@@ -221,7 +221,7 @@ var jobService = {
         cb(payload, payload ? null : "Couldn't get payload for recId " + (recData && recData.recId));  // Send payload via callback function
     },
     onEachResult: function onEachResult (result) { console.log("Inside jobService.onEachResult: " + JSON.stringify(result)); }
-    
+
 };
 
 batchProcessing.processFile(filePath, options, jobService, function(e) {   // Calling the processFile(..) function to start processing the file
@@ -239,7 +239,7 @@ The above code (`processFile()` function) inserts one record for every file-reco
 ```javascript
 {
         "_id" : ObjectId("5b04e87a09e96cfc3263f744"),
-        
+
         "fileRecordData" : {
                 "fileName" : "test/1k.txt",
                 "rec" : "100000000000000000000000000000000000000 100000000000000000000000000000000000000",
@@ -292,14 +292,14 @@ The above code (`processFile()` function) inserts one record for every file-reco
 
 <a name="Sample BatchRun record"></a>
 ### Sample BatchRun record
-A run of the `processFile()` function also inserts a summary record (one record for the complete run, which is for one data-file) into the *oe-Cloud* `BatchRun` model. 
+A run of the `processFile()` function also inserts a summary record (one record for the complete run, which is for one data-file) into the *oe-Cloud* `BatchRun` model.
 Shown below is a sample record from the `BatchRun` model.
 
 (Audit fields removed for clarity)
 ```javascript
 {
         "_id" : "1b709e40-8357-4557-80ee-7e0039f722fc",
-        
+
         "startTimeMillis" : 1527047662856,
         "startTime" : "2018-05-23T03:54:22.856Z",
         "filePath" : "test/1k.txt",
@@ -333,13 +333,13 @@ The *oe-Cloud batch-processing* module includes the following parsers which can 
 * CSV Parser
 * FW (Fixed Width) Parser
 
-These Parsers provide the ``onEachRecord`` function that needs to be part of the ``jobService`` object, which in turn is passed to the ``processFile`` function. 
+These Parsers provide the ``onEachRecord`` function that needs to be part of the ``jobService`` object, which in turn is passed to the ``processFile`` function.
 (See sample usage above to understand how these objects and functions are used)
 
 <a name="CSV Parser"></a>
 ## CSV Parser
 - The **CSV Parser** can be used to parse CSV (Comma Separated Value) data files, and also other delimited files by appropriately configuring the parser.
-- While parsing CSV, the comma (,) is allowed within data fields, provided such data fields are enclosed within double-quotes. 
+- While parsing CSV, the comma (,) is allowed within data fields, provided such data fields are enclosed within double-quotes.
 - The delimiter cannot be part of the data in case of non-CSV delimited files.
 
 <a name="CSV Parser Options"></a>
@@ -372,16 +372,16 @@ var options = {                       // options object
         appBaseURL: 'http://localhost:3000',                                                            // ignored if appBaseURL is present in payload
         modelAPI: '/api/Literals',                                                                      // ignored if modelAPI is present in payload
         method: 'POST',                                                                                 // ignored if method is present in payload
-        headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}  // ignored if headers is present in payload      
+        headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}  // ignored if headers is present in payload
     };
 
 var parserOptions = {   // Create the parserOptions object
 //    delimiter: ' ',                        // Optional. Default is ',' (comma)
     csvHeaders: ' key, value ',              // Mandatory. No. of csvHeaders (#csvHeaders) must be >= #data-fields. If #csvHeaders !== #data-fields, defaults to error. Whitespace is okay.
 //    csvHeaderDataTypes: 'string, number',  // Optional. Default is 'string,string,string,...' (all fields are considered as type string). #csvHeaderDataTypes must be >= #data-fields. If #csvHeaderDataTypes !== #data-fields, defaults to error. Whitespace is okay.
-    ignoreExtraHeaders: true,                // Optional. Default is false. If true, prevents error when #csvHeaders > #data-fields 
-    ignoreExtraHeaderDataTypes: true         // Optional. Default is false. If true, prevents error when #csvHeaderDataTypes > #data-fields 
-}  
+    ignoreExtraHeaders: true,                // Optional. Default is false. If true, prevents error when #csvHeaders > #data-fields
+    ignoreExtraHeaderDataTypes: true         // Optional. Default is false. If true, prevents error when #csvHeaderDataTypes > #data-fields
+}
 
 var csvParser = parsers.csvParser(parserOptions);          // Create a csvParser object by passing parserOptions
 
@@ -394,7 +394,7 @@ var jobService = {                                         // Create a jobServic
                 cb();
     },
     onEachRecord: csvParser.onEachRecord,                  // Using built-in CSV parser
-    
+
     onEachResult: function onEachResult (result) {         // Optional
         //console.log("Inside jobService.onEachResult: " + JSON.stringify(result));
     }
@@ -438,15 +438,15 @@ var options = {                       // options object
         appBaseURL: 'http://localhost:3000',                                                            // ignored if appBaseURL is present in payload
         modelAPI: '/api/Literals',                                                                      // ignored if modelAPI is present in payload
         method: 'POST',                                                                                 // ignored if method is present in payload
-        headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}  // ignored if headers is present in payload      
+        headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}  // ignored if headers is present in payload
     };
 
 var parserOptions = {
     fwHeaders: [
-        { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5 },        
+        { fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5 },
         { fieldName: 'value', type: 'boolean', length: 8, startPosition: 6, endPosition: 13 }
     ]
-};  
+};
 
 var fwParser = parsers.fwParser(parserOptions);            // Create a fwParser object by passing parserOptions
 
@@ -459,7 +459,7 @@ var jobService = {                                         // Create a jobServic
                 cb();
     },
     onEachRecord: fwParser.onEachRecord,                   // Using built-in FW parser
-    
+
     onEachResult: function onEachResult (result) {         // Optional
         //console.log("Inside jobService.onEachResult: " + JSON.stringify(result));
     }

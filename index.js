@@ -5,25 +5,25 @@ The Program may contain/reference third party or open source components, the rig
 Any unauthorized reproduction, storage, transmission in any form or by any means (including without limitation to electronic, mechanical, printing, photocopying, recording or  otherwise), or any distribution of this Program, or any portion of it, may result in severe civil and criminal penalties, and will be prosecuted to the maximum extent possible under the law.
 */
 /**
- * There is a requirement in many applications to load data into the application database from flat (text) files. 
- * Such a data load should honor all application validations and rules supported by the application for the specific 
- * type of data being loaded. The data files may contain a large number of records, one record per line. 
+ * There is a requirement in many applications to load data into the application database from flat (text) files.
+ * Such a data load should honor all application validations and rules supported by the application for the specific
+ * type of data being loaded. The data files may contain a large number of records, one record per line.
  * A line is assumed to be terminated by a newline (\n) character.
  *
- * Since file reading and processing is very processor intensive, the batch-processing module is kept separate 
- * from the oe-cloud application, and it is run in a separate NodeJS VM. This also means that the batch-processing 
- * module can be scaled separately. The module uses http REST API of the oe-cloud application to load the data into 
- * the application database. 
- * 
+ * Since file reading and processing is very processor intensive, the batch-processing module is kept separate
+ * from the oe-cloud application, and it is run in a separate NodeJS VM. This also means that the batch-processing
+ * module can be scaled separately. The module uses http REST API of the oe-cloud application to load the data into
+ * the application database.
+ *
  * This ensures that -
- * 
+ *
  * 1. all business validations and rules are applied for each record during the insert/update
  * 2. the application processing is load-balanced automatically, taking advantage of the application's infrastructure.
- * 
- * Considering the above, this oe-cloud batch-processing solution is built as a separate nodejs 
- * module (not included in the oe-cloud framework). 
- * This module can be "required" and its main function called by anyone (for e.g., by a batch client, 
- * or a batch scheduler or Node-RED, etc.,) who wishes to start a batch job for processing a file containing 
+ *
+ * Considering the above, this oe-cloud batch-processing solution is built as a separate nodejs
+ * module (not included in the oe-cloud framework).
+ * This module can be "required" and its main function called by anyone (for e.g., by a batch client,
+ * or a batch scheduler or Node-RED, etc.,) who wishes to start a batch job for processing a file containing
  * text data, one record per line.
 
  * @module batch-processing
@@ -34,7 +34,7 @@ var log, uuidv4, LineByLineReader, Bottleneck, request;
 if(!process.env["LOGGER_CONFIG"] && process.env["BATCH_LOGGER_CONFIG"]) {
     process.env["LOGGER_CONFIG"] = JSON.stringify({"levels":{"default":process.env["BATCH_LOGGER_CONFIG"].trim().toLocaleLowerCase()}});
 }
-try {  
+try {
 //1 // Libraries required by this module
     log = require('oe-logger')('batch-processing');
     // Used to create id for the BatchRun record that we will be creating
@@ -49,7 +49,7 @@ try {
 
 
 
-var batchRunInserted = false; 
+var batchRunInserted = false;
 var onEndCalled = false;
 var errMsg;
 
@@ -65,7 +65,7 @@ if(!process.env["LOGGER_CONFIG"] && process.env["BATCH_LOGGER_CONFIG"]) {
 /*
 Example config:
 {
-    "maxConcurrent": 80,      // Maximum number of records processed in parallel 
+    "maxConcurrent": 80,      // Maximum number of records processed in parallel
     "minTime": 20,            // Minimum time delay between start times of two records being processed, in ms
     "batchResultLogItems": "",  // Comma separated list of items that can be included in the default response that
                                 // is logged to DB. Possible values: error.details, error.stack, response.headers
@@ -76,17 +76,17 @@ var config, progressInterval, startTime, endTime, pCount = 0;
 try {
     config = require('./config.json');
     if(require.main !== module) log.info("Config: " + JSON.stringify(config));
-} catch(e) { log.warn("No config file found. Using default values for batch processing configuration"); 
+} catch(e) { log.warn("No config file found. Using default values for batch processing configuration");
 }
 
 
-var bottleNeckConfig = { maxConcurrent: process.env["MAX_CONCURRENT"]? Number(process.env["MAX_CONCURRENT"]) :  
-                        (config && config.maxConcurrent)? config.maxConcurrent : 80, 
-                        minTime: process.env["MIN_TIME"] ? Number(process.env["MIN_TIME"]) :  
+var bottleNeckConfig = { maxConcurrent: process.env["MAX_CONCURRENT"]? Number(process.env["MAX_CONCURRENT"]) :
+                        (config && config.maxConcurrent)? config.maxConcurrent : 80,
+                        minTime: process.env["MIN_TIME"] ? Number(process.env["MIN_TIME"]) :
                         (config && config.minTime)? config.minTime : 20 };
 if(require.main !== module) log.info("BottleNeck Config: " + JSON.stringify(bottleNeckConfig));
 
-// the module-object used to queue jobs and execute them with rate-limiting/throttling 
+// the module-object used to queue jobs and execute them with rate-limiting/throttling
 var limiter;
 
 // list of items to log in addition to default items
@@ -105,9 +105,9 @@ var lr;           // Line by line reader
 /**
  * This function is exported from this batch-processing module, and is the one that needs to be
  * called by clients who wish to batch-process files
- * 
+ *
  * parameters to be passed are as follows:
- * 
+ *
  * @param {string} filePath - fully qualified fileName (with path) of the data-file to be processed
  * @param {object} options - Object containing the following properties:
  *              * ctx - Object containing username, password, tenantId, access_token (ignored if username is present)
@@ -116,12 +116,12 @@ var lr;           // Line by line reader
  *              * method - HTTP method to be used for the processing - 'POST' / 'PUT' / 'GET' or 'DELETE'
  *              * headers - additional headers, if any, that need to be passed while making the request (optional)
  * @param {object} jobService - object containing the following properties:
- *              * @property {function} onStart - a function taking a single callback function as a parameter. (optional) 
+ *              * @property {function} onStart - a function taking a single callback function as a parameter. (optional)
  *              * @property {function} onEnd   - a function taking a single callback function as a parameter. (optional)
  *              * @property {function} onEachRecord - a function taking two parameters - recData (object), cb (callback function). This is mandatory.
  *              * @property {function} onEachResult - a function taking a single parameter - result (object). The result structure is as folows: {fileRecordData: recData, payload: payload, statusText: "FAILED", error: err };
- * @param {function} cb - callback function - gets called when all processing is finished. If an error occurs, cb is called with a non-null error object.                     
- */ 
+ * @param {function} cb - callback function - gets called when all processing is finished. If an error occurs, cb is called with a non-null error object.
+ */
 function processFile(filePath, options, jobService, cb) {
     var start = new Date().getTime();       // For logging
     console.log("\n** Starting Batch Processing **");
@@ -191,7 +191,7 @@ function processFile(filePath, options, jobService, cb) {
             log.fatal(errMsg);
 
             // Upon a limiter error, Updating the previously inserted BatchRun record with stats and exiting thereafter
-            // updateBatchRun(errMsg, function() { 
+            // updateBatchRun(errMsg, function() {
             // });
             clearInterval(progressInterval);
             return cb(error);
@@ -205,16 +205,16 @@ function processFile(filePath, options, jobService, cb) {
             onEndCalled = true;
             log.debug("LIMITER is IDLE. calling jobService.onEnd()");
             if(!eof) { lr.resume(); return; }  // Start queuing records for processing once the current queue is processed and the limiter is idle
-            // When eof and limiter is IDLE, Calling onEnd(..) after all records are processed, i.e., 
+            // When eof and limiter is IDLE, Calling onEnd(..) after all records are processed, i.e.,
             jobService.onEnd(function() {
                 log.debug("jobService.onEnd finished, calling processFile cb");
-                // After onEnd(..) returns (at the end of the run), Updating the previously inserted BatchRun record with stats 
+                // After onEnd(..) returns (at the end of the run), Updating the previously inserted BatchRun record with stats
                 updateBatchRun(undefined, function() {
-                    cb(); 
+                    cb();
                 });
                 process.stdout.write("- PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (endTime - startTime)/1000 + " sec. Limiter Stats: " + JSON.stringify(limiter.counts()) + "  ");
                 var mem = process.memoryUsage();
-                for (let key in mem) process.stdout.write(`${key}:${Math.round(mem[key] / 1024 / 1024 * 100) / 100} MB `); 
+                for (let key in mem) process.stdout.write(`${key}:${Math.round(mem[key] / 1024 / 1024 * 100) / 100} MB `);
                 console.log('');
                 clearInterval(progressInterval);
 
@@ -223,7 +223,7 @@ function processFile(filePath, options, jobService, cb) {
             });
         } else cb();
     });
-    
+
 //8 // This is where it all begins: Calling onStart(..)
     jobService.onStart(function(startOpts) {
 
@@ -239,7 +239,7 @@ function processFile(filePath, options, jobService, cb) {
                 throw new Error(errMsg);
             }
 
-//10        // Insert a new batchRun record that captures the parameters passed to processFile(..) 
+//10        // Insert a new batchRun record that captures the parameters passed to processFile(..)
             // and also the statistics at the end of the process run
 
             // generate id for new BatchRun
@@ -263,16 +263,16 @@ function processFile(filePath, options, jobService, cb) {
                     var status =  (error || (response && response.statusCode) !== 200) ? "FAILED" : "SUCCESS";
                     if(error || (response && response.statusCode) !== 200) {
                         log.error("Error while posting batchRun: ERROR: " + JSON.stringify(error) + " STATUS: " + (response && response.statusCode) + " RESPONSE: " + JSON.stringify(response));
-                        
+
                         if(response && response.statusCode === 401) {
-                            errMsg = "Check access_token/credentials. Expired/Wrong/Missing?. Aborting processing."; 
+                            errMsg = "Check access_token/credentials. Expired/Wrong/Missing?. Aborting processing.";
                             console.log("\n"+ errMsg +"\n");
                         }
                         if(error && error.code === "ECONNREFUSED") {
                             errMsg = "Is the oe-Cloud Application running? Check that it is running at the URL specified ( '"+ appBaseURL +"' )";
                             console.log("\n"+ errMsg +"\n");
                         }
-                        if(response && response.statusCode === 404) { 
+                        if(response && response.statusCode === 404) {
                             errMsg = "Check if oe-Cloud app has the necessary models required for batch-processing: `BatchStatus` and `BatchRun`. Aborting processing.";
                             console.log("\n"+ errMsg +"\n");
                         }
@@ -292,24 +292,24 @@ function processFile(filePath, options, jobService, cb) {
                         var PROGRESS_INTERVAL = (process.env['PROGRESS_INTERVAL'] ? Number(process.env['PROGRESS_INTERVAL']) : (config.progressInterval || 10000));
                         // Show progress at regular intervals
                         progressInterval = setInterval(function() {
-                            
+
                             process.stdout.write("- PROCESSED " + totalRecordCount + " Records, " + successCount + " SUCCEEDED, " + failureCount + " FAILED in " + (++pCount) * PROGRESS_INTERVAL/1000 + " sec. Limiter Stats: " + JSON.stringify(limiter.counts()) + "  ");
                             var mem = process.memoryUsage();
-                            for (let key in mem) process.stdout.write(`${key}:${Math.round(mem[key] / 1024 / 1024 * 100) / 100} MB `); 
+                            for (let key in mem) process.stdout.write(`${key}:${Math.round(mem[key] / 1024 / 1024 * 100) / 100} MB `);
                             console.log('');
                         }, PROGRESS_INTERVAL);
 
                         // Read the specified file, ...
                         lr = new LineByLineReader(filePath);
 //11                    // ... and process it line by line
-                        lr.on('line', function (rec) { 
+                        lr.on('line', function (rec) {
                             lr.pause();     // pause reading more lines (i.e., stop this 'line' event) until the current line is queued for processing
                             lineNr += 1;
                             log.debug("submitting job for rec#: " + lineNr);
                             var recData = {fileName: filePath, rec: rec, recId: lineNr};   // create the record data object for submission
 
 //12                        // Here, we're queuing (submitting) the jobs to the "limiter", one job for each line in the file
-                            // The "limiter" executes the jobs at a rate based of rate limit parameters in config. 
+                            // The "limiter" executes the jobs at a rate based of rate limit parameters in config.
                             // Parameters to submit(..) are as follows:
                             //  *  expiration - timeout for job
                             //     id - an id for the job
@@ -356,7 +356,7 @@ function processFile(filePath, options, jobService, cb) {
                                         if(BATCH_RESULT_LOG_ITEMS.indexOf("error.details") === -1 && response && response.body && response.body.error && response.body.error.details) response.body.error.details = undefined;
                                         if(BATCH_RESULT_LOG_ITEMS.indexOf("error.stack") === -1 && response && response.body && response.body.error && response.body.error.stack) response.body.error.stack = undefined;
                                         if(BATCH_RESULT_LOG_ITEMS.indexOf("response.headers") === -1 && response && response.headers) response.headers = undefined;
-                                        
+
                                         var status =  (error || (response && response.statusCode) !== 200) ? "FAILED" : "SUCCESS";
                                         if(response && response.statusCode !== 200) {
                                             log.error("Error while posting status: ERROR: " + JSON.stringify(error) + " STATUS: " + JSON.stringify(result) + " RESPONSE: " + JSON.stringify(response));
@@ -370,9 +370,9 @@ function processFile(filePath, options, jobService, cb) {
                                     failureCount++;
                                     log.error("Could not post status: ERROR: " + JSON.stringify(e) + " STATUS: " + JSON.stringify(result));
                                 }
-            
+
                             });
-                                        
+
                             if(limiter.counts().RECEIVED < MAX_QUEUE_SIZE) lr.resume();
                         });
 
@@ -380,7 +380,7 @@ function processFile(filePath, options, jobService, cb) {
                             errMsg = 'Error while reading file.' + JSON.stringify(err);
                             log.fatal(errMsg);
                             console.log(errMsg);
-                            updateBatchRun(errMsg, function() { 
+                            updateBatchRun(errMsg, function() {
                             });
                             clearInterval(progressInterval);
                             lr.close();
@@ -399,31 +399,31 @@ function processFile(filePath, options, jobService, cb) {
             } catch(e) {
                 log.error("Could not post status: ERROR: " + JSON.stringify(e) + " STATUS: " + JSON.stringify(result));
             }
-   
+
         });
-       
+
     });
 }
 
 //15
 /**
- * This function tries to obtain the access_token from on of the following, in the following order - 
+ * This function tries to obtain the access_token from on of the following, in the following order -
  *     - environment variable ACCESS_TOKEN
  *     - login using options.ctx.username, options.ctx.password and options.ctx.tenantId
  *     - options.ctx.access_token
- * 
+ *
  * If found from one of the above, this function sets the access_token as options.ctx.access_token2
  * "access_token2" is used as "access_token" is reserved for user-specified access token.
- * 
- * @param {object} options 
- * @param {function} cb 
+ *
+ * @param {object} options
+ * @param {function} cb
  */
 function getAccessToken(options, cb) {
     log.debug("Trying to get access_token");
 
     // First, try to get access token from environment variable
     var access_token = process.env["ACCESS_TOKEN"];
-    if(access_token) { 
+    if(access_token) {
         log.debug("access_token taken from env variable ACCESS_TOKEN");
         options.ctx.access_token2 = access_token;
         return cb();
@@ -474,14 +474,14 @@ function getAccessToken(options, cb) {
                         throw new Error(errMsg);
                     }
                 }
-                
+
             });
         } catch(e) {
             errMsg = "Could not post user credentials: ERROR: " + JSON.stringify(e);
             log.fatal(errMsg);
             throw new Error(errMsg);
         }
-    } 
+    }
     // finally, try to get access token directly from options
     else {
         log.debug("username is not specified in options.ctx. Won't try to login");
@@ -552,10 +552,10 @@ function updateBatchRun(error, cb6) {
  *                           It has the following properties:
  *                           @property {string} fileName - Name of the file being processed
  *                           @property {string} rec - The current line from the file, for processing
- *                           @property {number} recId - The line number (in the file) of the current line 
+ *                           @property {number} recId - The line number (in the file) of the current line
  * @param {function} cb3 - A callback function that is called after processing the current line. It takes a
  *                         @param {object} result - object containing results of execution
- * 
+ *
  */
 function runJob(jobService, recData, cb3) {
 
@@ -563,24 +563,24 @@ function runJob(jobService, recData, cb3) {
 
 //18// Calling the jobService.onEachRecord(..) function to get the next record via callback, as a JSON (payload) for processing
     // 'payload' would contain a property called 'json', which is a json representation of the current record
-    // The value of 'json' should be formatted as a valid payload for passing to the oe-cloud API specified by 'modelAPI' 
+    // The value of 'json' should be formatted as a valid payload for passing to the oe-cloud API specified by 'modelAPI'
     try {
     jobService.onEachRecord(recData, function cb2(payload, err) {
-        
+
         // Get base URL of oe-cloud app
         var appBaseURL = process.env["APP_BASE_URL"] || payload && payload.appBaseURL || (jobService.options && jobService.options.appBaseURL);
         if(!appBaseURL) {
             errMsg = "appBaseURL is neither specified in processFile options nor passed in payload. Aborting job.";
             log.fatal(errMsg);
-            updateBatchRun(errMsg, function() { 
-                throw new Error(errMsg); 
+            updateBatchRun(errMsg, function() {
+                throw new Error(errMsg);
             });
         }
 
         // Get access token
         var access_token = jobService.options && jobService.options.ctx && jobService.options.ctx.access_token2;
         if(!access_token) log.warn("Neither access_token is provided in env var (ACCESS_TOKEN) / options.ctx / payload.ctx nor user-credentials are provided in options.ctx");
-        
+
         // Check for error from onEachRecord
         if(err) {  // Do not proceed with POSTing in there was an error
             log.error("There was an error processing file record to JSON: " + JSON.stringify(err));
@@ -598,7 +598,7 @@ function runJob(jobService, recData, cb3) {
         if(!api) {
             errMsg = "modelAPI is neither specified in environment variable (MODEL_API) nor processFile options nor passed in payload. Aborting job."
             log.fatal(errMsg);
-            updateBatchRun(errMsg, function() { 
+            updateBatchRun(errMsg, function() {
             });
             lr.pause();
             limiter.updateSettings({reservoir: 0});
@@ -613,9 +613,9 @@ function runJob(jobService, recData, cb3) {
         if(!method) {
             errMsg = "method is neither specified in processFile options nor passed in payload. Aborting job.";
             log.fatal(errMsg);
-            updateBatchRun(errMsg, function() { 
+            updateBatchRun(errMsg, function() {
             });
-            throw new Error(errMsg); 
+            throw new Error(errMsg);
         }
         var headers = { 'Cookie': 'Content-Type=application/json; charset=encoding; Accept=application/json' };
         var additionalHeaders = (payload.headers ? payload.headers : (jobService.options && jobService.options.headers));
@@ -683,7 +683,7 @@ if (require.main === module) {
     console.log("Transformation logic needs to be provided by the client in the form of ");
     console.log("a `onEachRecord(..)` function. This function needs to be a member of a");
     console.log("`JobService` object.\n");
-    console.log("See README.md or http://evgit/oecloud.io/batch-processing for more info.\n");
+    console.log("See README.md or https://github.com/EdgeVerve/oe-batch-processing for more info.\n");
     console.log("Also see the `sample-usage.js` in the `batch-processing` project ");
     console.log("root for an example usage. Run it with \n");
     console.log("    $ node sample-usage.js\n");
