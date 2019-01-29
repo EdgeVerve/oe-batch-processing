@@ -430,8 +430,14 @@ function getAccessToken(options, cb) {
         options.ctx.access_token2 = access_token;
         return cb();
     }
+    //try to get access token directly from options
+    else if (options && options.ctx && options.ctx.access_token){
+        log.debug("username is not specified in options.ctx. Won't try to login");
+        access_token =  (options && options.ctx && options.ctx.access_token);
+        return cb();
+    }
     // then see if username is specified in options. If so, try login
-    else if(options && options.ctx && options.ctx.username)
+    else if(options && options.ctx && options.ctx.username && options.ctx.password)
     {
         log.debug("Found username in options.ctx. Will try login for obtaining access_token");
         if(!options.ctx.password) log.warn("password is not specified in options.ctx");
@@ -484,15 +490,9 @@ function getAccessToken(options, cb) {
             throw new Error(errMsg);
         }
     } 
-    // finally, try to get access token directly from options
-    else {
-        log.debug("username is not specified in options.ctx. Won't try to login");
-        access_token =  (options && options.ctx && options.ctx.access_token);
-        if(access_token) {
-            log.debug("access_token taken from options.ctx");
-            options.ctx.access_token2 = access_token;
-        }
-        else log.warn("access_token neither in env var (ACCESS_TOKEN) / options.ctx nor available through login (user creds not available in options.ctx)");
+    else 
+    {
+        log.warn("access_token neither in env var (ACCESS_TOKEN) / options.ctx nor available through login (user creds not available in options.ctx)");
         return cb();
     }
 }
