@@ -1,0 +1,6 @@
+{
+    "maxConcurrent": 80, 
+    "minTime": 20,
+    "batchResultLogItems": "",
+    "appBaseURL": "http://localhost:3000"
+}
