@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "bottleneck": "2.16.2",
-    "camelcase": "5.0.0",
     "line-by-line": "0.1.6",
     "lodash": "4.17.11",
     "oe-cloud": "git+http://evgit/oecloud.io/oe-cloud.git#master",
