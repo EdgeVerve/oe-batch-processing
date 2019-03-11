@@ -1,0 +1,19 @@
+{
+  "_meta": {
+    "sources": [
+      "../common/models"
+    ],
+    "mixins": [
+      "../common/mixins",
+      "oe-common-mixins/common/mixins"
+    ]
+  },
+  "BatchRun": {
+    "dataSource": "db",
+    "public": true
+  },
+  "BatchStatus": {
+    "dataSource": "db",
+    "public": true
+  } 
+}

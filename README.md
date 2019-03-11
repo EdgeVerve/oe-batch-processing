@@ -1,51 +1,27 @@
-# Table of Contents
-- [Installation and Quick Start](#Installation and Quick Start)
+## Table of Contents
 - [Need](#Need)
-- [Solution](#Solution)
 - [Implementation](#Implementation)
+- [Setup](#Setup)
+- [Features](#Features)
 - [Configuration](#Configuration)
-    - [Sample BatchStatus record](#Sample BatchStatus record)
-    - [Sample BatchRun record](#Sample BatchRun record)
-- [Builtin Parsers](#Builtin Parsers)
-    - [CSV Parser](#CSV Parser)
-        - [CSV Parser Options](#CSV Parser Options)
-        - [Sample Usage - CSV Parser](#Sample Usage - CSV Parser)
-    - [FW Parser](#FW Parser)
-        - [FW Parser Options](#FW Parser Options)
-        - [Sample Usage - FW Parser](#Sample Usage - FW Parser)
-
-
-
-<a name="Installation and Quick Start"></a>
-# Installation and Quick Start
-To install, clone this project, change to the `oe-batch-processing` directory, and run `npm install`.
-
-To try some samples, run -
-
-```console
-node sample-usage-with-custom-parser.js          ## This sample demonstrates the usage with a custom parser
-
-node sample-usage-with-builtin-fw-parser.js      ## This sample demonstrates the usage with a builtin fixed width parser
-
-node sample-usage-with-builtin-csv-parser.js     ## This sample demonstrates the usage with a builtin csv parser
-
-```
-
-To run tests, run -
-
-```console
-npm test
-
-```
+- [Parsers and Usage](#Parsers)
+    - [Custom Parsers](#CustomParsers)
+    - [Builtin Parsers](#BuiltinParsers)
+        - [CSV Parser](#CSVParser)
+        - [FW Parser](#FWParser)
 
 <a name="Need"></a>
-# Need
+## Need
 There is a requirement in many applications to load data into the application database from flat (text) files. Such a data load should honor all application validations and rules supported by the application for the specific type of data being loaded. The data files may contain a large number of records, one record per line. A line is assumed to be terminated by a newline (\n) character.
 
-<a name="Solution"></a>
-# Solution
 
-Since file reading and processing is very processor intensive, the *batch-processing* module is kept separate from the *oe-Cloud* application, and it is run in a separate *NodeJS* VM.
+<a name="Implementation"></a>
+## Implementation
+The **oe-batch-processing** module provides the infrastructure for catering to the above need. It is implemented as an **app-list**
+module for **oe-Cloud** based applications.
+
+Since file reading and processing is very processor intensive, the *batch-processing* module runtime is kept separate from the *oe-Cloud* application,
+and it is run in a separate *NodeJS* VM.
 This also means that the *batch-processing* module can be scaled separately.
 The module uses http REST API of the *oe-Cloud* application to load the data into the application database.
 
@@ -55,19 +31,11 @@ This ensures that -
 1. all business validations and rules are applied for each record during the insert/update
 2. the application processing is load-balanced automatically, taking advantage of the application's infrastructure.
 
-Considering the above, the *oc-Cloud* batch-processing solution is built as a separate nodejs module (not included in the *oc-Cloud* framework).
-It can be "required" and its main function called by anyone (for e.g., by a batch client, or a batch scheduler or Node-RED, etc.,)
-who wishes to start a batch job for processing a file containing text data, one record per line. Status of each record that is processed, as well
-as the batch run summary are persisted into the *oc-Cloud* application for audit / recovery / analysis purposes.
-
-<a name="Implementation"></a>
-# Implementation
-
-The *oe-Cloud batch-processing* module is available at https://github.com/EdgeVerve/oe-batch-processing.
-
 This module exports a `processFile ( filePath, options, jobService, cb )` function - to be called by a batch client who wishes to start a batch job.
-The function processes each record in the file and saves the result of each record insert/update into a *oc-Cloud* model called `BatchStatus`.
-At the end of the file processing, it saves the summary of the batch processing into another *oc-Cloud* model called `BatchRun`
+The function processes each record in the file, calls the configured API to post the data to the app DB, and saves the result (status) of each
+record insert/update into a model called `BatchStatus`.
+At the end of the file processing, it saves the summary of the batch processing into another model called `BatchRun`. These models are provided by the
+**oe-batch-processing** module.
 
 The `processFile(..)` function takes the following arguments, which need to be provided by the client -
 
@@ -79,7 +47,7 @@ The `processFile(..)` function takes the following arguments, which need to be p
     * *ctx* - Object containing `username`, `password`, `tenantId`, `access_token`. User credentials (`username`, `password`, `tenantId`) supercede `access_token`.
     i.e., `access_token` is ignored if `username` is present. Both `access_token` (in options.ctx) and user credentials (`username`, `password`, `tenantId`) are overridden by the environment variable `ACCESS_TOKEN`.
 
-    * *appBaseURL* - URL of *oc-Cloud* application where data will be posted, e.g., 'http://localhost:3000' This is overridden if *appBaseURL* is specified in `payload` (see below)
+    * *appBaseURL* - URL of *oe-Cloud* application where data will be posted, e.g., 'http://localhost:3000' This is overridden if *appBaseURL* is specified in `payload` (see below)
 
     * *modelAPI* - API of Model where file data will be posted, e.g., '/api/Literals' (optional, can also be specified via payload). This is overridden if *modelAPI* is specified in `payload` (see below)
 
@@ -94,7 +62,7 @@ The `processFile(..)` function takes the following arguments, which need to be p
     * **onEnd**   - a  (optional) function taking a single callback function as a parameter. This function is called after all file records have been processed may be used to notify the client about the end status of the batch job.
     * **onEachRecord** - a (mandatory) function which is called for each record in the file to be processed.
     This function is implemented by the client, and it should have the logic to convert the record data (from file) sent to it via `recData.rec`
-    to a valid JSON for posting to the *oc-Cloud* application.
+    to a valid JSON for posting to the *oe-Cloud* application.
     This function takes two parameters - *recData*, *cb* -
 
         * *recData* (object) - contains the details of the current record for processing. It has the following properties - *fileName*, *rec*, *recId* :
@@ -105,8 +73,8 @@ The `processFile(..)` function takes the following arguments, which need to be p
 
             * *Payload* (object) consists of the folowing properties:
 
-                * *json* (object)     - A JSON representation of the file record (recData.rec) suitable for POSTing to the *oc-Cloud* application.
-                * *modelAPI* (string) - The *oc-Cloud* REST API to which the data needs to be POSTed, e.g., '/api/Literals'. This overrides *modelAPI* if specified in options (see above)
+                * *json* (object)     - A JSON representation of the file record (recData.rec) suitable for POSTing to the *oe-Cloud* application.
+                * *modelAPI* (string) - The *oe-Cloud* REST API to which the data needs to be POSTed, e.g., '/api/Literals'. This overrides *modelAPI* if specified in options (see above)
                 * *method* (string)   - The http verb to be used for calling the modelAPI, e.g., 'POST' / 'PUT'. This overrides *method* if specified in options (see above)
                 * *headers* (object)  - optional request headers to be added while calling modelAPI. This overrides *headers* if specified in options (see above)
 
@@ -141,16 +109,78 @@ The `processFile(..)` function does the following in sequence -
 4. Reads the file, and queue the `runJob(..)` function with parameters `jobService` and `recData`, once for each record in the file
 5. Now, the queue is processed by executing the `runJob(..)` function with its arguments in a parallel, but rate-limited/throttled manner.
 6. Inside the `runJob(..)` function, `jobService.onEachRecord(..)` is called to obtain the JSON representation of `recData.rec` and api details
-7. The *oc-Cloud* API is called and the result is logged to the `BatchStatus` model via a separate API call.
+7. The *oe-Cloud* API is called and the result is logged to the `BatchStatus` model via a separate API call.
 8. The  `jobService.onEachResult(..)` functtion is called with the result of record processing as argument
 9. Steps 6-8 is repeated till the queue is completely processed.
 10. After all records are processed, the `jobService.onEnd()` function is called
 11. Updates `BatchRun` model with statistics of the run
 
-<a name="Configuration"></a>
-# Configuration
 
-The *oe-Cloud batch-processing* module can be configured usind a `config.json` file at the root of the module. This config file has the following structure:
+<a name="Setup"></a>
+## Setup
+To get the *Batch Processing* feature, the following changes need to be done in the *oe-Cloud* based application:
+
+1. The [**oe-batch-processing**](https://github.com/EdgeVerve/oe-batch-processing) node module needs to be added as a ``package.json`` dependency.
+2. This module needs to be added to the `server/app-list.json` file in the app.
+3. Run ``npm install --no-optional``
+
+The code snippets below show how steps 1 and 2 can be done:
+
+**package.json**  (only part of the file is shown here, with relevant section in **bold**):
+
+<pre>
+...
+   ...
+   "dependencies": {
+       ...
+       ...
+       ...
+       <B>"oe-batch-processing": "git+https://github.com/EdgeVerve/oe-batch-processing.git#2.0.0",</B>
+       ...
+       ...
+</pre>
+
+**server/app-list.json**   (Relevant section in **bold**):
+
+<pre>
+[
+    {
+        "path": "oe-cloud",
+        "enabled": true
+    },
+    . . .
+    . . .
+    . . .
+    <b>{
+        "path": "oe-batch-processing",
+        "enabled": true
+    },</b>
+    . . .
+    . . .
+    . . .
+	{
+        "path": "./",
+        "enabled": true
+    }
+]
+</pre>
+
+
+<a name="Features"></a>
+## Features
+The **oe-batch-processing** module has the following features:
+1. Can process text files of arbitrary length
+2. Can be setup to throttle the rate at which records are processed
+3. Can process CSV and Fixed-Width Value files OTB, using builtin parsers
+4. Can use custom parsers for any other data formats
+5. Can be scaled independently (i.e., can be different from application scaling)
+6. Logs all success and failure conditions to DB for audit / recovery / analysis purposes.
+7. Provides hooks (functions) that trigger before and at the end of file processing
+
+<a name="Configuration"></a>
+## Configuration
+
+The *oe-batch-processing* module can be configured usind a `config.json` file at the root of the module. This config file has the following structure:
 
 ```json
 {
@@ -170,9 +200,9 @@ The details of these config parameters is given below:
 |maxConcurrent|determines the maximum number of jobs that are run in parallel.|80|MAX_CONCURRENT|
 |minTime |determines how long to wait in milliseconds after launching a job before launching another one.|20|MIN_TIME|
 |batchResultLogItems|a comma separated list of items that can be included in the default response that is logged to DB. Possible values in this list are: *error.details*, *error.stack*, *response.headers*| "" | BATCH_RESULT_LOG_ITEMS |
-|appBaseURL|URL of *oc-Cloud* app where data will be posted. This would be used if `appBaseURL` is not present in `options` passed to `processFile(..)` by the batch client.| undefined | APP_BASE_URL|
-|modelAPI|The *oc-Cloud* REST API to which the data needs to be POSTed, e.g., '/api/Literals'.|undefined|MODEL_API|
-|progressInterval|Interval in milliseconds at which to pring the progress of file processing in the console|10000|PROGRESS_INTERVAL|
+|appBaseURL|URL of *oe-Cloud* app where data will be posted. This would be used if `appBaseURL` is not present in `options` passed to `processFile(..)` by the batch client.| undefined | APP_BASE_URL|
+|modelAPI|The *oe-Cloud* REST API to which the data needs to be POSTed, e.g., '/api/Literals'.|undefined|MODEL_API|
+|progressInterval|Interval in milliseconds at which to print the progress of file processing in the console. Set this to 0 to disable printing progress to console.|10000|PROGRESS_INTERVAL|
 
 
 A few other configurations are as follows:
@@ -182,9 +212,15 @@ A few other configurations are as follows:
 |environment variable `BATCH_LOGGER_CONFIG`|Sets log level to one of *trace*, *debug*, *warn*, *error*, or *info*, if oe-Cloud's LOGGER_CONFIG is not set|
 |environment variable `ACCESS_TOKEN`|Overrides `access_token` that may be set in `options.ctx`. `ACCESS_TOKEN` in environment variable also supercedes any user credentials supplied in `options.ctx`.|
 
-<a name="Sample Usage - Custom Parser"></a>
-## Sample Usage - Custom Parser
-A sample usage of the *oe-Cloud batch-processing* module with *custom parser* is shown below:
+<a name="Parsers"></a>
+## Parsers and Usage
+
+The **oe-batch-processing** module includes two builtin parsers - CSV (Comma Separated Value) and FWV (Fixed Width Value)
+The user can also write custom parsers for other data formats.
+
+<a name="CustomParsers"></a>
+### Custom Parsers
+A sample usage of the *oe-batch-processing* module with *custom parser* is shown below:
 
 ```javascript
 
@@ -194,22 +230,23 @@ var filePath = 'test/testdata.txt';   // File to process
 
 var options = {                       // options object
         //ctx: {access_token: 'P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx'},      // ignored if user credentials are passed
-        ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},                      // supercedes access_token
+        ctx: {username: 'judith', password: 'Edge@2017$', tenantId: '/default'},                      // supercedes access_token
         appBaseURL: 'http://localhost:3000',                                                            // ignored if appBaseURL is present in payload
         modelAPI: '/api/Literals',                                                                      // ignored if modelAPI is present in payload
         method: 'POST',                                                                                 // ignored if method is present in payload
         headers: { 'custom-header1': 'custom-header-value1', 'custom-header2': 'custom-header-value2'}  // ignored if headers is present in payload
     };
 
+// User-defined jobService object which encapsulates the custom parser
 var jobService = {
 
     onStart: function (cb) { cb({}); },            // onStart is optional
 
     onEnd: function (cb) { cb(); },                // onEnd is optional
 
-    onEachRecord: function (recData, cb) {         // onEachRecord is mandatory
+    onEachRecord: function (recData, cb) {         // onEachRecord is mandatory - this does the parsing
 
-        var json = {'key': recData.rec.split(' ')[0], 'value': recData.rec.split(' ')[1]};  // logic to convert file record (string) to *oc-Cloud* processable object
+        var json = {'key': recData.rec.split(' ')[0], 'value': recData.rec.split(' ')[1]};  // logic to convert file record (string) to *oe-Cloud* processable object
 
         var payload = {
                 json: json,
@@ -231,9 +268,10 @@ batchProcessing.processFile(filePath, options, jobService, function(e) {   // Ca
 
 ```
 
-<a name="Sample BatchStatus record"></a>
-### Sample BatchStatus record
-The above code (`processFile()` function) inserts one record for every file-record processed into the *oe-Cloud* `BatchStatus` model. Shown below is a sample record from the `BatchStatus` model.
+
+#### Sample BatchStatus record
+The above code (`processFile()` function) inserts one record for every file-record processed into the `BatchStatus` model.
+Shown below is a sample record from the `BatchStatus` model.
 
 (Audit fields removed for clarity)
 ```javascript
@@ -290,9 +328,9 @@ The above code (`processFile()` function) inserts one record for every file-reco
 ```
 
 
-<a name="Sample BatchRun record"></a>
-### Sample BatchRun record
-A run of the `processFile()` function also inserts a summary record (one record for the complete run, which is for one data-file) into the *oe-Cloud* `BatchRun` model.
+
+#### Sample BatchRun record
+A run of the `processFile()` function also inserts a summary record (one record for the complete run, which is for one data-file) into the `BatchRun` model.
 Shown below is a sample record from the `BatchRun` model.
 
 (Audit fields removed for clarity)
@@ -307,7 +345,7 @@ Shown below is a sample record from the `BatchRun` model.
                 "ctx" : {
                         "username" : "judith",
                         "password" : "Edge@2017$",
-                        "tenantId" : "demoTenant",
+                        "tenantId" : "/default",
                         "access_token2" : "6wz8nE9BqO32VGDqGcvt14fPwjuJJMBDjXW07d5nxmqtBNR5OjGJj1TsuEXVdogC"  // 'access_token2' is obtained by the batch-processing module by login using user credentials
                 },                                                                                            // A client-provided access token would be under 'access_token'
                 "appBaseURL" : "http://localhost:3000",
@@ -327,8 +365,8 @@ Shown below is a sample record from the `BatchRun` model.
 }
 ```
 
-<a name="Builtin Parsers"></a>
-## Builtin Parsers
+<a name="BuiltinParsers"></a>
+### Builtin Parsers
 The *oe-Cloud batch-processing* module includes the following parsers which can be used OTB with minimal configuration:
 * CSV Parser
 * FW (Fixed Width) Parser
@@ -336,14 +374,13 @@ The *oe-Cloud batch-processing* module includes the following parsers which can 
 These Parsers provide the ``onEachRecord`` function that needs to be part of the ``jobService`` object, which in turn is passed to the ``processFile`` function.
 (See sample usage above to understand how these objects and functions are used)
 
-<a name="CSV Parser"></a>
-## CSV Parser
+<a name="CSVParser"></a>
+#### CSV Parser
 - The **CSV Parser** can be used to parse CSV (Comma Separated Value) data files, and also other delimited files by appropriately configuring the parser.
 - While parsing CSV, the comma (,) is allowed within data fields, provided such data fields are enclosed within double-quotes.
 - The delimiter cannot be part of the data in case of non-CSV delimited files.
 
-<a name="CSV Parser Options"></a>
-### CSV Parser Options
+##### CSV Parser Options
 The *CSV Parser* is configured by passing a `parserOptions` object to it with the following properties
 
 |Config Property|Description|Default Value|Example|
@@ -354,9 +391,9 @@ The *CSV Parser* is configured by passing a `parserOptions` object to it with th
 |ignoreExtraHeaders|Optional. A boolean flag, if set to true, ignores the case where there are more headers specified than the number of fields in the data file|false|false|
 |ignoreExtraHeaderDataTypes|Optional. A boolean flag, if set to true, ignores the case where there are more header-data-types specified than the number of fields in the data file|false|false|
 
-<a name="Sample Usage - CSV Parser"></a>
-### Sample Usage - CSV Parser
-A sample usage of the *oe-Cloud batch-processing* module with *csv parser* is shown below:
+
+##### CSV Parser usage
+A sample usage of the *oe-batch-processing* module with *csv parser* is shown below:
 
 ```javascript
 
@@ -368,7 +405,7 @@ var filePath = 'test/testdata.txt';   // File to process
 
 var options = {                       // options object
         //ctx: {access_token: 'P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx'},      // ignored if user credentials are passed
-        ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},                      // supercedes access_token
+        ctx: {username: 'judith', password: 'Edge@2017$', tenantId: '/default'},                      // supercedes access_token
         appBaseURL: 'http://localhost:3000',                                                            // ignored if appBaseURL is present in payload
         modelAPI: '/api/Literals',                                                                      // ignored if modelAPI is present in payload
         method: 'POST',                                                                                 // ignored if method is present in payload
@@ -407,12 +444,12 @@ batchProcessing.processFile(filePath, options, jobService, function(e) {   // Ca
 
 ```
 
-<a name="FW Parser"></a>
-## FW Parser
+<a name="FWParser"></a>
+#### FW Parser
 - The **FW Parser** can be used to parse FW (Fixed Width) data files by appropriately configuring the parser.
 
-<a name="FW Parser Options"></a>
-### FW Parser Options
+
+##### FW Parser Options
 The *FW Parser* is configured by passing a `parserOptions` object to it with the following properties
 
 |Config Property|Description|Default Value|Example|
@@ -420,8 +457,8 @@ The *FW Parser* is configured by passing a `parserOptions` object to it with the
 |fwHeaders|- Mandatory. An array of objects, each object containing the metadata of a single field. The array should have as many elements as there are fields to parse in the data-file. Each object should have the following mandatory properties: `fieldName`, `type`, `startPosition`,`endPosition`| No default headers are provided.|```[{ fieldName: 'key', type: 'string', length: 5, startPosition: 1, endPosition: 5 }, { fieldName: 'value', type: 'boolean', length: 8, startPosition: 6, endPosition: 13 }]```|
 
 
-<a name="Sample Usage - FW Parser"></a>
-### Sample Usage - FW Parser
+
+##### FW Parser usage
 A sample usage of the *oe-Cloud batch-processing* module with *fw parser* is shown below:
 
 ```javascript
@@ -434,7 +471,7 @@ var filePath = 'test/testdata.txt';   // File to process
 
 var options = {                       // options object
         //ctx: {access_token: 'P6dTLbKf0lnpugUxQalYmeJktp29YXsMZ0dWTnq5v4pf7w86PE1kblKMzqu1drnx'},      // ignored if user credentials are passed
-        ctx: {username: 'judith', password: 'Edge@2017$', tenantId: 'demoTenant'},                      // supercedes access_token
+        ctx: {username: 'judith', password: 'Edge@2017$', tenantId: '/default'},                      // supercedes access_token
         appBaseURL: 'http://localhost:3000',                                                            // ignored if appBaseURL is present in payload
         modelAPI: '/api/Literals',                                                                      // ignored if modelAPI is present in payload
         method: 'POST',                                                                                 // ignored if method is present in payload
