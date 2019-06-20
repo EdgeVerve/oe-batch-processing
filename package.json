@@ -1,6 +1,6 @@
 {
   "name": "oe-batch-processing",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "This is a nodejs module for batch processing of files. See README.md for details.",
   "main": "index.js",
   "directories": {
