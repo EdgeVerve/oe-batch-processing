@@ -1,6 +1,6 @@
 {
   "name": "oe-batch-processing",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "This is a nodejs module for batch processing of files. See README.md for details.",
   "engines": {
     "node": ">=6"
@@ -16,9 +16,9 @@
   "dependencies": {
     "bottleneck": "2.16.2",
     "line-by-line": "0.1.6",
-    "lodash": "4.17.11",
-    "oe-cloud": "git+http://evgit/oecloud.io/oe-cloud.git#2.0.0",
-    "oe-common-mixins": "git+http://evgit/oecloud.io/oe-common-mixins.git#2.0.0"
+    "lodash": "4.17.14",
+    "oe-cloud": "git+http://evgit/oecloud.io/oe-cloud.git#2.1.0",
+    "oe-common-mixins": "git+http://evgit/oecloud.io/oe-common-mixins.git#2.1.0"
   },
   "devDependencies": {
     "babel-eslint": "7.2.3",
@@ -27,7 +27,7 @@
     "chai-things": "0.2.0",
     "chalk": "1.1.1",
     "eslint": "4.10.0",
-    "grunt": "1.0.3",
+    "grunt": "1.0.4",
     "grunt-contrib-clean": "2.0.0",
     "grunt-contrib-copy": "1.0.0",
     "grunt-mkdir": "1.0.0",
