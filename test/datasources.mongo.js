@@ -17,15 +17,13 @@ module.exports =
     "connector": "transient"
   },
   "db": {
-    "host": mongoHost,
-    "port": 27017,
-    "url": "mongodb://" + mongoHost + ":27017/" + dbName,
-    "database": dbName,
-    "password": "admin",
-    "name": "db",
-    "connector": "mongodb",
-    "user": "admin",
-    "connectionTimeout": 500000
+    'host': mongoHost,
+    'port': 27017,
+    'url': 'mongodb://' + mongoHost + ':27017/' + dbName,
+    'database': dbName,
+    'name': 'db',
+    'connector': 'mongodb',
+    'connectionTimeout': 500000
   }
 };
 
