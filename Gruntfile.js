@@ -61,7 +61,7 @@ module.exports = function GruntConfig(grunt) {
           timeout: 60000,
           check: {
             lines: 90,
-            statements: 90,
+            statements: 85,
             branches: 50,
             functions: 100
           },
