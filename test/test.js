@@ -212,7 +212,7 @@ describe(chalk.blue('batch-processing-tests'), function (done) {
         options.ctx = undefined;   // Not supplying credentials
 
         a.processFile(filePath, options, jobService, function(e) {
-            console.log(e.message);
+            console.log(e);
             if(e && e.message && e.message.indexOf('Check access_token/credentials. Expired/Wrong/Missing?.') > -1) done();
             else done(e);
         });
@@ -224,7 +224,7 @@ describe(chalk.blue('batch-processing-tests'), function (done) {
         options.ctx = {username: 'ajith', password: 'some_wrong_pwd', tenantId: '/default'};   // supplying wrong credentials
 
         a.processFile(filePath, options, jobService, function(e) {
-            console.log(e.message);
+            console.log(e);
             if(e && e.message && e.message.indexOf('Check access_token/credentials. Expired/Wrong/Missing?.') > -1) done();
             else done(e);
         });
