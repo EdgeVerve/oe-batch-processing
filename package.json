@@ -16,7 +16,7 @@
   "dependencies": {
     "bottleneck": "2.16.2",
     "line-by-line": "0.1.6",
-    "lodash": "4.17.14",
+    "lodash": "4.17.15",
     "oe-cloud": "^2.0.0",
     "oe-common-mixins": "^2.0.0"
   },
