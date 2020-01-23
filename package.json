@@ -1,6 +1,6 @@
 {
   "name": "oe-batch-processing",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "This is a nodejs module for batch processing of files. See README.md for details.",
   "engines": {
     "node": ">=6"
@@ -16,8 +16,8 @@
   "dependencies": {
     "bottleneck": "2.16.2",
     "line-by-line": "0.1.6",
-    "oe-cloud": "git+http://evgit/oecloud.io/oe-cloud.git#master",
-    "oe-common-mixins": "git+http://evgit/oecloud.io/oe-common-mixins.git#master"
+    "oe-cloud": "git+http://evgit/oecloud.io/oe-cloud.git#2.2.0",
+    "oe-common-mixins": "git+http://evgit/oecloud.io/oe-common-mixins.git#2.2.0"
   },
   "devDependencies": {
     "babel-eslint": "7.2.3",
@@ -31,9 +31,9 @@
     "grunt-mocha-istanbul": "5.0.2",
     "istanbul": "0.4.5",
     "mocha": "5.2.0",
-    "oe-connector-mongodb": "git+http://evgit/oecloud.io/oe-connector-mongodb.git#master",
-    "oe-connector-oracle": "git+http://evgit/oecloud.io/oe-connector-oracle.git#master",
-    "oe-connector-postgresql": "git+http://evgit/oecloud.io/oe-connector-postgresql.git#master",
+    "oe-connector-mongodb": "git+http://evgit/oecloud.io/oe-connector-mongodb.git#2.2.0",
+    "oe-connector-oracle": "git+http://evgit/oecloud.io/oe-connector-oracle.git#2.2.0",
+    "oe-connector-postgresql": "git+http://evgit/oecloud.io/oe-connector-postgresql.git#2.2.0",
     "superagent-defaults": "0.1.14",
     "supertest": "3.4.2"
   },
