@@ -16,3 +16,4 @@ nodered
 *.njsproj
 .vimrc
 package-lock.json
+oracle-user.sh
